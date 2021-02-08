@@ -1,7 +1,9 @@
 #include <stdio.h>
+#include <ctype.h>
+
 #include <unistd.h>
-#include <termios.h> // to turn of echo mode
-#include <stdlib.h> // atexits
+#include <termios.h> // to turn of echo mode and canonical mode
+#include <stdlib.h> // atexit()
 
 struct termios copyFlags;
 void reset(){
@@ -26,15 +28,22 @@ void turnOfFlags() {
 }
 
 int main () {
-    // First turn of Echo mode
+    // First turn of Echo mode and canonical mode
     turnOfFlags();
     
     printf("Welcome.Feel free to type. Type q to quit\n");
     char c;
-    // still in cononical mode
     while (read(STDIN_FILENO, &c, 1) == 1) {
         if (c == 'q')
             break;
+        // test raw mode
+        // remember ASCII 0–31 and 127 are control characters
+        //                32–126 are all printable.
+        if (iscntrl(c)) {
+              printf("%d\n", c);
+            } else {
+              printf("%d ('%c')\n", c, c);
+            }
     }
     return 0;
 }

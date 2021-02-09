@@ -19,10 +19,15 @@ void turnOfFlags() {
     
     // c_lflag: “local flags"  // c_iflag: "input flags"
     // c_oflag: "output flags" // c_cflag: "control flags"
-    rawFlags.c_lflag &= ~(ECHO | ICANON);
-    // echo mode off
-    // canonical mode off - reads byte by byte, not line by line
-    
+    rawFlags.c_lflag &= ~(ECHO | ICANON | | IEXTEN | ISIG);
+    // ~ECHO echo mode off
+    // ~ICANON canonical mode off - reads byte by byte, not line by line
+    // ~ISIG - reads ctr + c not as (SIGINT) and ctr + z not as (SIGTSTP) and ctr + y not to suspend to background
+    // ~IEXTEN - ctr + v not to have the terminal wait for you to type another character
+    //         - ctr + o not to discard the control character
+    rawFlags.c_iflag &= ~(ICRNL | IXON);
+    // ~IXON - reads ctr + s and ctrl + q, usually they toggling data from being/not being transmitted to the terminal, for XON and XOFF of transmissions.
+    // ~ICRNL - not to have the terminal helpfully translating any carriage returns into newlines (10, '\n').
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &rawFlags);
     // TCSAFLUSH argument specifies when to apply the change: it waits for all pending output to be written to the terminal, and also discards any input that hasn’t been read.
 }
@@ -43,8 +48,7 @@ int main () {
         // ctr + q == resume sending output
         // ctr + z (or y) suspends programm to the background.
         // Run the fg command to resume
-        // ctr + c == (SIGINT)
-        // ctr + z == (SIGTSTP)
+        	
         if (iscntrl(c)) {
               printf("%d\n", c);
             } else {

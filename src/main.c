@@ -25,9 +25,22 @@ void turnOfFlags() {
     // ~ISIG - reads ctr + c not as (SIGINT) and ctr + z not as (SIGTSTP) and ctr + y not to suspend to background
     // ~IEXTEN - ctr + v not to have the terminal wait for you to type another character
     //         - ctr + o not to discard the control character
-    rawFlags.c_iflag &= ~(ICRNL | IXON);
-    // ~IXON - reads ctr + s and ctrl + q, usually they toggling data from being/not being transmitted to the terminal, for XON and XOFF of transmissions.
+    rawFlags.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+    // ~BRKINT (old, usually not important) not have a break condition cause a SIGINT signal
     // ~ICRNL - not to have the terminal helpfully translating any carriage returns into newlines (10, '\n').
+    // ~INPCK (old, usually not important) disables parity checking, which doesn’t seem to apply to modern terminal emulators.
+    // ~ISTRIP (old, usually turned off already) not to strip 8th bits of each input byte.
+    // ~IXON - reads ctr + s and ctrl + q, usually they toggling data from being/not being transmitted to the terminal, for XON and XOFF of transmissions.
+    
+    
+    rawFlags.c_oflag &= ~(OPOST);
+    //  ~OPOST - not to translate "\n" to "\r\n". terminal requires both of these characters in order to start a new line of text.
+    
+    rawFlags.c_cflag |= (CS8);
+    // |CS8 (a mask) sets the character size to 8 bits per byte. It is usually already set that way.
+    
+    rawFlags.c_cc[VMIN] = 0; // minimum number of bytes needed before read() can return
+    rawFlags.c_cc[VTIME] = 1; // maximum amount of time to wait before read() returns.
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &rawFlags);
     // TCSAFLUSH argument specifies when to apply the change: it waits for all pending output to be written to the terminal, and also discards any input that hasn’t been read.
 }
@@ -37,7 +50,7 @@ int main () {
     turnOfFlags();
     
     printf("Welcome.Feel free to type. Type q to quit\n");
-    char c;
+    char c = '\0';
     while (read(STDIN_FILENO, &c, 1) == 1) {
         if (c == 'q')
             break;
@@ -52,7 +65,7 @@ int main () {
         if (iscntrl(c)) {
               printf("%d\n", c);
             } else {
-              printf("%d ('%c')\n", c, c);
+              printf("%d ('%c')\r\n", c, c);
             }
     }
     return 0;

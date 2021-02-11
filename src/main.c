@@ -5,21 +5,30 @@
 #include <termios.h> // to turn of echo mode and canonical mode
 #include <stdlib.h> // atexit()
 
+#include <errno.h>
+
 struct termios copyFlags;
+
+void failExit(const char *s);
 void reset(){
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &copyFlags);
+    int res = tcsetattr(STDIN_FILENO, TCSAFLUSH, &copyFlags);
+    if (res == -1)
+        failExit("Could not reset flags");
 }
 
 void turnOfFlags() {
     struct termios rawFlags;
-    tcgetattr(STDIN_FILENO, &rawFlags);
+    int res;
+    res = tcgetattr(STDIN_FILENO, &rawFlags);
+    if (res == -1)
+        failExit("Could not retreive flags");
     // Save original flags to restore them before exiting
     copyFlags = rawFlags;
     atexit(reset);
     
     // c_lflag: “local flags"  // c_iflag: "input flags"
     // c_oflag: "output flags" // c_cflag: "control flags"
-    rawFlags.c_lflag &= ~(ECHO | ICANON | | IEXTEN | ISIG);
+    rawFlags.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
     // ~ECHO echo mode off
     // ~ICANON canonical mode off - reads byte by byte, not line by line
     // ~ISIG - reads ctr + c not as (SIGINT) and ctr + z not as (SIGTSTP) and ctr + y not to suspend to background
@@ -40,28 +49,33 @@ void turnOfFlags() {
     // |CS8 (a mask) sets the character size to 8 bits per byte. It is usually already set that way.
     
     rawFlags.c_cc[VMIN] = 0; // minimum number of bytes needed before read() can return
-    rawFlags.c_cc[VTIME] = 1; // maximum amount of time to wait before read() returns.
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &rawFlags);
+    rawFlags.c_cc[VTIME] = 1; // maximum amount of time to wait before read() returns.  1/10th of a second
+    res = tcsetattr(STDIN_FILENO, TCSAFLUSH, &rawFlags);
     // TCSAFLUSH argument specifies when to apply the change: it waits for all pending output to be written to the terminal, and also discards any input that hasn’t been read.
+    if (res == -1)
+        failExit("Could not set flags (raw mode)");
 }
 
+void failExit(const char *s) {
+    perror(s);
+    exit(1);
+}
 int main () {
     // First turn of Echo mode and canonical mode
     turnOfFlags();
     
     printf("Welcome.Feel free to type. Type q to quit\n");
-    char c = '\0';
-    while (read(STDIN_FILENO, &c, 1) == 1) {
+    
+    while (1) {
+        char c = '\0';
+        int res = read(STDIN_FILENO, &c, 1);
+        if (res == -1 && errno != EAGAIN)
+            failExit("Unable to read input");
         if (c == 'q')
             break;
         // test raw mode
         // remember ASCII 0–31 and 127 are control characters
         //                32–126 are all printable.
-        // ctr + s == to stop sending output
-        // ctr + q == resume sending output
-        // ctr + z (or y) suspends programm to the background.
-        // Run the fg command to resume
-        	
         if (iscntrl(c)) {
               printf("%d\n", c);
             } else {

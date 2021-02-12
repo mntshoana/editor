@@ -65,6 +65,23 @@ void failExit(const char *s) {
     perror(s);
     exit(1);
 }
+void processKey(){
+    char c = '\0';
+    int res = read(STDIN_FILENO, &c, 1);
+    if (res == -1 && errno != EAGAIN)
+        failExit("Unable to read input");
+    if (c == controlKey('q'))
+        break;
+    // test raw mode
+    // remember ASCII 0–31 and 127 are control characters
+    //                32–126 are all printable.
+    if (iscntrl(c)) {
+          printf("%d\r\n", c);
+    } else {
+      printf("%d ('%c')\r\n", c, c);
+    }
+}
+
 int main () {
     // First turn of Echo mode and canonical mode
     turnOfFlags();
@@ -72,20 +89,7 @@ int main () {
     printf("Welcome.Feel free to type. Type q to quit\n");
     
     while (1) {
-        char c = '\0';
-        int res = read(STDIN_FILENO, &c, 1);
-        if (res == -1 && errno != EAGAIN)
-            failExit("Unable to read input");
-        if (c == controlKey('q'))
-            break;
-        // test raw mode
-        // remember ASCII 0–31 and 127 are control characters
-        //                32–126 are all printable.
-        if (iscntrl(c)) {
-              printf("%d\r\n", c);
-        } else {
-          printf("%d ('%c')\r\n", c, c);
-        }
+        processKey();
     }
     return 0;
 }

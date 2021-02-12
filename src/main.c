@@ -9,6 +9,10 @@
 
 struct termios copyFlags;
 
+char controlKey(char c) {
+    return c & 0x1f; // ctr + c maps to ASCII byte between 1 and 26
+}
+
 void failExit(const char *s);
 void reset(){
     int res = tcsetattr(STDIN_FILENO, TCSAFLUSH, &copyFlags);
@@ -48,6 +52,7 @@ void turnOfFlags() {
     rawFlags.c_cflag |= (CS8);
     // |CS8 (a mask) sets the character size to 8 bits per byte. It is usually already set that way.
     
+    // c_cc: control characters
     rawFlags.c_cc[VMIN] = 0; // minimum number of bytes needed before read() can return
     rawFlags.c_cc[VTIME] = 1; // maximum amount of time to wait before read() returns.  1/10th of a second
     res = tcsetattr(STDIN_FILENO, TCSAFLUSH, &rawFlags);
@@ -71,16 +76,16 @@ int main () {
         int res = read(STDIN_FILENO, &c, 1);
         if (res == -1 && errno != EAGAIN)
             failExit("Unable to read input");
-        if (c == 'q')
+        if (c == controlKey('q'))
             break;
         // test raw mode
         // remember ASCII 0–31 and 127 are control characters
         //                32–126 are all printable.
         if (iscntrl(c)) {
-              printf("%d\n", c);
-            } else {
-              printf("%d ('%c')\r\n", c, c);
-            }
+              printf("%d\r\n", c);
+        } else {
+          printf("%d ('%c')\r\n", c, c);
+        }
     }
     return 0;
 }

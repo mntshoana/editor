@@ -9,9 +9,8 @@
 
 struct termios copyFlags;
 
-char controlKey(char c) {
-    return c & 0x1f; // ctr + c maps to ASCII byte between 1 and 26
-}
+// ctr + c maps to ASCII byte between 1 and 26
+#define controlKey(c) c & 0x1f
 
 void failExit(const char *s);
 void reset(){
@@ -65,29 +64,37 @@ void failExit(const char *s) {
     perror(s);
     exit(1);
 }
+
+// Key press event handler
 void processKey(){
+    // read character
     char c = '\0';
-    int res = read(STDIN_FILENO, &c, 1);
-    if (res == -1 && errno != EAGAIN)
-        failExit("Unable to read input");
-    if (c == controlKey('q'))
-        break;
-    // test raw mode
-    // remember ASCII 0–31 and 127 are control characters
-    //                32–126 are all printable.
-    if (iscntrl(c)) {
-          printf("%d\r\n", c);
-    } else {
-      printf("%d ('%c')\r\n", c, c);
+    int res;
+    while ((res = read( STDIN_FILENO, &c, 1)) != 1) {
+        if (res == -1 && errno != EAGAIN)
+            failExit("Unable to read input");
     }
+    // process character
+    switch (c) {
+        case controlKey('q'):
+            exit(0);
+            break;
+        default:
+            // Print
+            // remember ASCII 0–31 and 127 are control characters
+            //                32–126 are all printable.
+            if (iscntrl(c))
+                printf("%d\r\n", c);
+            else
+                printf("%d ('%c')\r\n", c, c);
+    };
 }
 
 int main () {
     // First turn of Echo mode and canonical mode
     turnOfFlags();
     
-    printf("Welcome.Feel free to type. Type q to quit\n");
-    
+    printf("Welcome.Feel free to type. [ctr+q] to quit\n");
     while (1) {
         processKey();
     }

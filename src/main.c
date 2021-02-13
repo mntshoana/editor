@@ -12,7 +12,22 @@ struct termios copyFlags;
 // ctr + c maps to ASCII byte between 1 and 26
 #define controlKey(c) c & 0x1f
 
-void failExit(const char *s);
+/* V100 escape sequences */
+// https://vt100.net/docs/vt100-ug/chapter3.html
+// \x1b is the escape character, 27
+// escape sequence, nmber of chars
+#define CL_SCREEN_ALL          "\x1b[2J" , 4
+#define CL_SCREEN_ABOVE_CURSOR "\x1b[1J" , 4
+#define CL_SCREEN_BELOW_CURSOR "\x1b[0J" , 4
+#define REPOS_CURSOR_TOP_LEFT  "\x1b[H", 3
+void terminalEscape(const char *sequence, int count){
+    write(STDOUT_FILENO, sequence, count);
+}
+void failExit(const char *s) {
+    perror(s);
+    exit(1);
+}
+
 void reset(){
     int res = tcsetattr(STDIN_FILENO, TCSAFLUSH, &copyFlags);
     if (res == -1)
@@ -60,11 +75,6 @@ void turnOfFlags() {
         failExit("Could not set flags (raw mode)");
 }
 
-void failExit(const char *s) {
-    perror(s);
-    exit(1);
-}
-
 // Key press event handler
 void processKey(){
     // read character
@@ -94,7 +104,10 @@ int main () {
     // First turn of Echo mode and canonical mode
     turnOfFlags();
     
-    printf("Welcome.Feel free to type. [ctr+q] to quit\n");
+    
+    printf("Welcome.Feel free to type. [ctr+q] to quit\r\n");
+    terminalEscape(CL_SCREEN_ALL);
+    terminalEscape(REPOS_CURSOR_TOP_LEFT);
     while (1) {
         processKey();
     }

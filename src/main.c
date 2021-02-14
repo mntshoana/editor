@@ -7,7 +7,11 @@
 
 #include <errno.h>
 
+#include <sys/ioctl.h> // get the terminal size
+
 struct termios copyFlags;
+int screenrows;
+int screencols;
 
 // ctr + c maps to ASCII byte between 1 and 26
 #define controlKey(c) c & 0x1f
@@ -20,6 +24,7 @@ struct termios copyFlags;
 #define CL_SCREEN_ABOVE_CURSOR "\x1b[1J" , 4
 #define CL_SCREEN_BELOW_CURSOR "\x1b[0J" , 4
 #define REPOS_CURSOR_TOP_LEFT  "\x1b[H", 3
+
 void terminalEscape(const char *sequence, int count){
     write(STDOUT_FILENO, sequence, count);
 }
@@ -100,10 +105,31 @@ void processKey(){
     };
 }
 
+// Not sure if the following will function supports Windows OS
+int getWindowSize(int *rows, int *cols) {
+    struct winsize ws;
+    // ??maybe stands for Input/Output Control) Get WINdow SiZe.)
+    int res = ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
+    if (res == -1 || ws.ws_col == 0)
+        return -1;
+    else {
+        *cols = ws.ws_col;
+        *rows = ws.ws_row;
+    }
+    return 0;
+}
+
+void editorSize() {
+    int res = getWindowSize(&screenrows, &screencols);
+    if (res== -1)
+        failExit("Could not get the editor / terminal size");
+}
+
 int main () {
     // First turn of Echo mode and canonical mode
     turnOfFlags();
-    
+    editorSize(); // get the editor size
+
     
     printf("Welcome.Feel free to type. [ctr+q] to quit\r\n");
     terminalEscape(CL_SCREEN_ALL);

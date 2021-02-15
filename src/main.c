@@ -24,6 +24,8 @@ int screencols;
 #define CL_SCREEN_ABOVE_CURSOR "\x1b[1J" , 4
 #define CL_SCREEN_BELOW_CURSOR "\x1b[0J" , 4
 #define REPOS_CURSOR_TOP_LEFT  "\x1b[H", 3
+#define REPOS_CURSOR_BOTTOM_RIGHT "\x1b[999C\x1b[999B", 12
+#define QUERRY_CURSOR_POS      "\x1b[6n", 4
 
 void terminalEscape(const char *sequence, int count){
     write(STDOUT_FILENO, sequence, count);
@@ -105,13 +107,38 @@ void processKey(){
     };
 }
 
-// Not sure if the following will function supports Windows OS
 int getWindowSize(int *rows, int *cols) {
     struct winsize ws;
-    // ??maybe stands for Input/Output Control) Get WINdow SiZe.)
+    // ??maybe stands for: Terminal Input/Output Control) Get WINdow SiZe.)
     int res = ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
-    if (res == -1 || ws.ws_col == 0)
-        return -1;
+    if (1 || res == -1 || ws.ws_col == 0){ // failure
+        if (write(STDOUT_FILENO, REPOS_CURSOR_BOTTOM_RIGHT) != 12)
+            return -1; // failure
+        // Alterntive way to get height and width
+        if (write(STDOUT_FILENO, QUERRY_CURSOR_POS) != 4)
+            return -1; // failure
+        printf("\r\n");
+        char buf[32];
+        unsigned int i = 0;
+        while (i < sizeof(buf) - 1) {
+            if (read(STDIN_FILENO, &buf[i], 1) != 1)
+                break; // error
+            if (buf[i] == 'R') {
+                buf[i] = '\0';
+                break; // terminate input once R is reached
+            }
+            i++;
+        }
+        if (buf[0] != '\x1b' || buf[1] != '[')
+            return -1; // Alternative method did not work, still failure
+        
+        int res = sscanf(&buf[2], "%d;%d", rows, cols);
+        if ( res != 2) // need to read both integers or
+            return -1; // failure
+        
+        SIGINT;
+        return 0;
+    }
     else {
         *cols = ws.ws_col;
         *rows = ws.ws_row;
@@ -121,7 +148,7 @@ int getWindowSize(int *rows, int *cols) {
 
 void editorSize() {
     int res = getWindowSize(&screenrows, &screencols);
-    if (res== -1)
+    if (res == -1)
         failExit("Could not get the editor / terminal size");
 }
 

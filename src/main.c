@@ -111,7 +111,8 @@ int getWindowSize(int *rows, int *cols) {
     struct winsize ws;
     // ??maybe stands for: Terminal Input/Output Control) Get WINdow SiZe.)
     int res = ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
-    if (1 || res == -1 || ws.ws_col == 0){ // failure
+    if (res == -1 || ws.ws_col == 0){
+        // ioctl failed, try alternative method
         if (write(STDOUT_FILENO, REPOS_CURSOR_BOTTOM_RIGHT) != 12)
             return -1; // failure
         // Alterntive way to get height and width
@@ -130,13 +131,14 @@ int getWindowSize(int *rows, int *cols) {
             i++;
         }
         if (buf[0] != '\x1b' || buf[1] != '[')
-            return -1; // Alternative method did not work, still failure
+            // Alternative method failed
+            return -1;
         
         int res = sscanf(&buf[2], "%d;%d", rows, cols);
         if ( res != 2) // need to read both integers or
-            return -1; // failure
+            // or else Alternative method fails
+            return -1;
         
-        SIGINT;
         return 0;
     }
     else {

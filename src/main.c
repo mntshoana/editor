@@ -13,7 +13,7 @@ struct termios copyFlags;
 int screenrows;
 int screencols;
 
-// ctr + c maps to ASCII byte between 1 and 26
+// ctr + char maps to ASCII byte between 1 and 26
 #define controlKey(c) c & 0x1f
 
 /* V100 escape sequences */
@@ -26,21 +26,31 @@ int screencols;
 #define REPOS_CURSOR_TOP_LEFT  "\x1b[H", 3
 #define REPOS_CURSOR_BOTTOM_RIGHT "\x1b[999C\x1b[999B", 12
 #define QUERRY_CURSOR_POS      "\x1b[6n", 4
+// end of V100 escape sequences
 
+/* termialEscape
+ * Makes it easeir to send request to the terminal
+ *   requests use escape sequences
+*    This allows more control over the terminal
+ */
 void terminalEscape(const char *sequence, int count){
     write(STDOUT_FILENO, sequence, count);
 }
+
+// Prints an error message and exits the program
 void failExit(const char *s) {
     perror(s);
     exit(1);
 }
 
+// Terminal is reset to it's natural state
 void reset(){
     int res = tcsetattr(STDIN_FILENO, TCSAFLUSH, &copyFlags);
     if (res == -1)
         failExit("Could not reset flags");
 }
 
+// Terminal is adjusted to a custom state
 void turnOfFlags() {
     struct termios rawFlags;
     int res;
@@ -107,6 +117,9 @@ void processKey(){
     };
 }
 
+/*
+ * Retreives the size of the terminal's width and height
+ */
 int getWindowSize(int *rows, int *cols) {
     struct winsize ws;
     // ??maybe stands for: Terminal Input/Output Control) Get WINdow SiZe.)
@@ -159,7 +172,6 @@ int main () {
     turnOfFlags();
     editorSize(); // get the editor size
 
-    
     printf("Welcome.Feel free to type. [ctr+q] to quit\r\n");
     terminalEscape(CL_SCREEN_ALL);
     terminalEscape(REPOS_CURSOR_TOP_LEFT);

@@ -1,2 +1,8 @@
 # A text editor created from scratch
+This project attempts a text editor using c and no dependencies. It should support the basic features you expect in a terminal editor is expeted to have. Soon, it should also have additional features like highlighting and searching.
 
+To build and run:
+````
+make
+bin/main.o
+````

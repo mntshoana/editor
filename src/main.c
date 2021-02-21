@@ -5,13 +5,11 @@
 #include <termios.h> // to turn of echo mode and canonical mode
 #include <stdlib.h> // atexit()
 
+#include <string.h> // memcpy
 #include <errno.h>
 
 #include <sys/ioctl.h> // get the terminal size
 
-struct termios copyFlags;
-int screenrows;
-int screencols;
 
 // ctr + char maps to ASCII byte between 1 and 26
 #define controlKey(c) c & 0x1f
@@ -24,18 +22,20 @@ int screencols;
 #define CL_SCREEN_ABOVE_CURSOR "\x1b[1J" , 4
 #define CL_SCREEN_BELOW_CURSOR "\x1b[0J" , 4
 #define REPOS_CURSOR_TOP_LEFT  "\x1b[H", 3
+#define REPOS_CURSOR_X_LEFT(x)  "\x1b["#x";1H", 7
 #define REPOS_CURSOR_BOTTOM_RIGHT "\x1b[999C\x1b[999B", 12
 #define QUERRY_CURSOR_POS      "\x1b[6n", 4
 // end of V100 escape sequences
 
-/* termialEscape
- * Makes it easeir to send request to the terminal
- *   requests use escape sequences
-*    This allows more control over the terminal
- */
-void terminalEscape(const char *sequence, int count){
-    write(STDOUT_FILENO, sequence, count);
-}
+
+struct termios copyFlags;
+int screenrows;
+int screencols;
+
+struct outputBuffer {
+  char *buf;
+  int size;
+};
 
 // Prints an error message and exits the program
 void failExit(const char *s) {
@@ -117,6 +117,28 @@ void processKey(){
     };
 }
 
+/* appendToBuffer
+ * Dynamically reallocates memory for outputting a string
+ */
+void appendToBuffer(struct outputBuffer* out, const char* str, int len) {
+    char* ptr = realloc(out->buf, out->size + len);
+    if (ptr == NULL)
+      return; // failed to reallocate
+
+    memcpy( &ptr[out->size], str, len);
+    out->buf = ptr;
+    out->size += len;
+}
+
+
+/* termial
+ * Makes it easeir to write to the terminal
+ *   appends characters and escape sequences to the buffer
+ */
+ int terminalOut(const char *sequence, int count){
+    return write(STDOUT_FILENO, sequence, count);
+}
+
 /*
  * Retreives the size of the terminal's width and height
  */
@@ -125,12 +147,12 @@ int getWindowSize(int *rows, int *cols) {
     // ??maybe stands for: Terminal Input/Output Control) Get WINdow SiZe.)
     int res = ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
     if (res == -1 || ws.ws_col == 0){
-        // ioctl failed, try alternative method
-        if (write(STDOUT_FILENO, REPOS_CURSOR_BOTTOM_RIGHT) != 12)
-            return -1; // failure
-        // Alterntive way to get height and width
-        if (write(STDOUT_FILENO, QUERRY_CURSOR_POS) != 4)
-            return -1; // failure
+        // ioctl failed, try alternative method to get height and width
+        struct outputBuffer oBuf = {NULL, 0};
+        appendToBuffer(&oBuf, REPOS_CURSOR_BOTTOM_RIGHT);
+        appendToBuffer(&oBuf, QUERRY_CURSOR_POS);
+        terminalOut(oBuf.buf, oBuf.size);
+        free(oBuf.buf);
         printf("\r\n");
         char buf[32];
         unsigned int i = 0;
@@ -167,14 +189,28 @@ void editorSize() {
         failExit("Could not get the editor / terminal size");
 }
 
+void loadRows(struct outputBuffer* oBuf, int delta){
+    for (int y = 0; y < screenrows - 1 + delta; y++)
+        appendToBuffer(oBuf, "~\r\n", 3);
+    appendToBuffer(oBuf, "~", 1);
+}
+
+void refresh(){
+    struct outputBuffer oBuf = {NULL, 0};
+    appendToBuffer(&oBuf, CL_SCREEN_ALL);
+    appendToBuffer(&oBuf, REPOS_CURSOR_TOP_LEFT);
+    appendToBuffer(&oBuf, "Welcome. Feel free to type.", 27);
+    appendToBuffer(&oBuf, " Press \"ctr+q\" to quit\r\n", 28);
+    loadRows(&oBuf, -1);
+    appendToBuffer(&oBuf, REPOS_CURSOR_X_LEFT(2));
+    terminalOut(oBuf.buf, oBuf.size);
+    free(oBuf.buf);
+}
 int main () {
     // First turn of Echo mode and canonical mode
     turnOfFlags();
     editorSize(); // get the editor size
-
-    printf("Welcome.Feel free to type. [ctr+q] to quit\r\n");
-    terminalEscape(CL_SCREEN_ALL);
-    terminalEscape(REPOS_CURSOR_TOP_LEFT);
+    refresh();
     while (1) {
         processKey();
     }

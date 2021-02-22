@@ -21,10 +21,17 @@
 #define CL_SCREEN_ALL          "\x1b[2J" , 4
 #define CL_SCREEN_ABOVE_CURSOR "\x1b[1J" , 4
 #define CL_SCREEN_BELOW_CURSOR "\x1b[0J" , 4
+#define CL_LINE_RIGHT_OF_CURSOR "\x1b[K", 3
+#define CL_LINE_LEFT_OF_CURSOR "\x1b[1K", 4
+#define CL_LINE_ALL            "\x1b[2K", 4
+
 #define REPOS_CURSOR_TOP_LEFT  "\x1b[H", 3
 #define REPOS_CURSOR_X_LEFT(x)  "\x1b["#x";1H", 7
 #define REPOS_CURSOR_BOTTOM_RIGHT "\x1b[999C\x1b[999B", 12
 #define QUERRY_CURSOR_POS      "\x1b[6n", 4
+
+#define HIDE_CURSOR "\x1b[?25l", 6
+#define SHOW_CURSOR "\x1b[?25h", 6
 // end of V100 escape sequences
 
 
@@ -92,6 +99,14 @@ void turnOfFlags() {
         failExit("Could not set flags (raw mode)");
 }
 
+/* termial
+ * Makes it easeir to write to the terminal
+ *   appends characters and escape sequences to the buffer
+ */
+ int terminalOut(const char *sequence, int count){
+    return write(STDOUT_FILENO, sequence, count);
+}
+
 // Key press event handler
 void processKey(){
     // read character
@@ -104,6 +119,8 @@ void processKey(){
     // process character
     switch (c) {
         case controlKey('q'):
+            terminalOut(CL_SCREEN_ALL);
+            terminalOut(REPOS_CURSOR_TOP_LEFT);
             exit(0);
             break;
         default:
@@ -130,14 +147,6 @@ void appendToBuffer(struct outputBuffer* out, const char* str, int len) {
     out->size += len;
 }
 
-
-/* termial
- * Makes it easeir to write to the terminal
- *   appends characters and escape sequences to the buffer
- */
- int terminalOut(const char *sequence, int count){
-    return write(STDOUT_FILENO, sequence, count);
-}
 
 /*
  * Retreives the size of the terminal's width and height
@@ -197,12 +206,21 @@ void loadRows(struct outputBuffer* oBuf, int delta){
 
 void refresh(){
     struct outputBuffer oBuf = {NULL, 0};
+    appendToBuffer(&oBuf, HIDE_CURSOR);
     appendToBuffer(&oBuf, CL_SCREEN_ALL);
     appendToBuffer(&oBuf, REPOS_CURSOR_TOP_LEFT);
-    appendToBuffer(&oBuf, "Welcome. Feel free to type.", 27);
-    appendToBuffer(&oBuf, " Press \"ctr+q\" to quit\r\n", 28);
+    
+    const char* title = "Welcome. feel free to type."
+                  " Press \"ctr+q\" to quit\r\n";
+    char padding [(screencols - strlen(title) ) / 2];
+    for (int i = 0; i < sizeof(padding); i++)
+        padding[i] = ' ';
+    
+    appendToBuffer(&oBuf, padding, sizeof(padding));
+    appendToBuffer(&oBuf, title, strlen(title));
     loadRows(&oBuf, -1);
     appendToBuffer(&oBuf, REPOS_CURSOR_X_LEFT(2));
+    appendToBuffer(&oBuf, SHOW_CURSOR);
     terminalOut(oBuf.buf, oBuf.size);
     free(oBuf.buf);
 }

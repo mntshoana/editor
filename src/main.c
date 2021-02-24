@@ -26,7 +26,6 @@
 #define CL_LINE_ALL            "\x1b[2K", 4
 
 #define REPOS_CURSOR_TOP_LEFT  "\x1b[H", 3
-#define REPOS_CURSOR_X_LEFT(x)  "\x1b["#x";1H", 7
 #define REPOS_CURSOR_BOTTOM_RIGHT "\x1b[999C\x1b[999B", 12
 #define QUERRY_CURSOR_POS      "\x1b[6n", 4
 
@@ -34,7 +33,9 @@
 #define SHOW_CURSOR "\x1b[?25h", 6
 // end of V100 escape sequences
 
-
+struct pos {
+    int x, y;
+}cursorPos = {1,1}; // not 0 based
 struct termios copyFlags;
 int screenrows;
 int screencols;
@@ -79,7 +80,7 @@ void turnOfFlags() {
     rawFlags.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
     // ~BRKINT (old, usually not important) not have a break condition cause a SIGINT signal
     // ~ICRNL - not to have the terminal helpfully translating any carriage returns into newlines (10, '\n').
-    // ~INPCK (old, usually not important) disables parity checking, which doesn’t seem to apply to modern terminal emulators.
+    // ~INPCK (old, usually not important) disables parity checking, which doesn’t seem to                  ly to modern terminal emulators.
     // ~ISTRIP (old, usually turned off already) not to strip 8th bits of each input byte.
     // ~IXON - reads ctr + s and ctrl + q, usually they toggling data from being/not being transmitted to the terminal, for XON and XOFF of transmissions.
     
@@ -107,6 +108,35 @@ void turnOfFlags() {
     return write(STDOUT_FILENO, sequence, count);
 }
 
+/* appendToBuffer
+ * Dynamically reallocates memory for outputting a string
+ */
+void appendToBuffer(struct outputBuffer* out, const char* str, int len) {
+    char* ptr = realloc(out->buf, out->size + len);
+    if (ptr == NULL)
+      return; // failed to reallocate
+
+    memcpy( &ptr[out->size], str, len);
+    out->buf = ptr;
+    out->size += len;
+}
+
+// Helper function to conver cursor positions to terminal sequence string
+void appendreposCursorSequence(struct outputBuffer* out, int x, int y) {
+    char temp[32];
+    snprintf(temp, sizeof(temp), "\x1b[%d;%dH", x, y);
+    appendToBuffer(out, temp, strlen(temp));
+}
+
+void redraw(){
+    struct outputBuffer oBuf = {NULL, 0};
+    appendToBuffer(&oBuf, HIDE_CURSOR);
+    appendreposCursorSequence(&oBuf, cursorPos.x, cursorPos.y);
+    appendToBuffer(&oBuf, SHOW_CURSOR);
+    terminalOut(oBuf.buf, oBuf.size);
+    free(oBuf.buf);
+}
+
 // Key press event handler
 void processKey(){
     // read character
@@ -123,6 +153,26 @@ void processKey(){
             terminalOut(REPOS_CURSOR_TOP_LEFT);
             exit(0);
             break;
+        case '\x1b':
+            {
+            char seq[3];
+                res = read(STDIN_FILENO, &seq[0], 1);
+            if (res != 1) // read one more... and
+                break; // Assume key = ESC
+                res = read(STDIN_FILENO, &seq[1], 1);
+            if (res != 1) // another character
+                break; // Assume key = ESC
+            if (seq[0] == '[') {
+                  switch (seq[1]) {
+                      case 'A': cursorPos.x--; break; // Arrow left
+                      case 'B': cursorPos.x++; break; // Arrow right
+                      case 'C': cursorPos.y--; break; // Arrow up
+                      case 'D': cursorPos.y++; break; // Arrow down
+                  }
+                redraw();
+                }
+                break;
+            }
         default:
             // Print
             // remember ASCII 0–31 and 127 are control characters
@@ -133,20 +183,6 @@ void processKey(){
                 printf("%d ('%c')\r\n", c, c);
     };
 }
-
-/* appendToBuffer
- * Dynamically reallocates memory for outputting a string
- */
-void appendToBuffer(struct outputBuffer* out, const char* str, int len) {
-    char* ptr = realloc(out->buf, out->size + len);
-    if (ptr == NULL)
-      return; // failed to reallocate
-
-    memcpy( &ptr[out->size], str, len);
-    out->buf = ptr;
-    out->size += len;
-}
-
 
 /*
  * Retreives the size of the terminal's width and height
@@ -196,6 +232,8 @@ void editorSize() {
     int res = getWindowSize(&screenrows, &screencols);
     if (res == -1)
         failExit("Could not get the editor / terminal size");
+    cursorPos.y =1;
+    cursorPos.x =0;
 }
 
 void loadRows(struct outputBuffer* oBuf, int delta){
@@ -219,7 +257,7 @@ void refresh(){
     appendToBuffer(&oBuf, padding, sizeof(padding));
     appendToBuffer(&oBuf, title, strlen(title));
     loadRows(&oBuf, -1);
-    appendToBuffer(&oBuf, REPOS_CURSOR_X_LEFT(2));
+    appendreposCursorSequence(&oBuf, cursorPos.y, cursorPos.x);
     appendToBuffer(&oBuf, SHOW_CURSOR);
     terminalOut(oBuf.buf, oBuf.size);
     free(oBuf.buf);

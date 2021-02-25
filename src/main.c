@@ -124,7 +124,7 @@ void appendToBuffer(struct outputBuffer* out, const char* str, int len) {
 // Helper function to conver cursor positions to terminal sequence string
 void appendreposCursorSequence(struct outputBuffer* out, int x, int y) {
     char temp[32];
-    snprintf(temp, sizeof(temp), "\x1b[%d;%dH", x, y);
+    snprintf(temp, sizeof(temp), "\x1b[%d;%dH", y, x);
     appendToBuffer(out, temp, strlen(temp));
 }
 
@@ -165,21 +165,21 @@ void processKey(){
             if (seq[0] == '[') {
                   switch (seq[1]) {
                       case 'A':
-                          if (cursorPos.x != 0)
-                              cursorPos.x--;
-                          break; // Arrow left
-                      case 'B':
-                          if (cursorPos.x++ != screencols-1)
-                              cursorPos.x++;
-                          break; // Arrow right
-                      case 'C':
-                          if (cursorPos.y != 0)
+                          if (cursorPos.y > 1)
                               cursorPos.y--;
                           break; // Arrow up
-                      case 'D':
-                          if (cursorPos.y != screenrows -1)
+                      case 'B':
+                          if (cursorPos.y < screenrows)
                               cursorPos.y++;
                           break; // Arrow down
+                      case 'C':
+                          if (cursorPos.x < screencols)
+                              cursorPos.x++;
+                          break; // Arrow right
+                      case 'D':
+                          if (cursorPos.x > 1)
+                              cursorPos.x--;
+                          break; // Arrow left
                   }
                 redraw();
                 }
@@ -244,8 +244,8 @@ void editorSize() {
     int res = getWindowSize(&screenrows, &screencols);
     if (res == -1)
         failExit("Could not get the editor / terminal size");
-    cursorPos.y =1;
-    cursorPos.x =0;
+    cursorPos.y =2;
+    cursorPos.x =1;
 }
 
 void loadRows(struct outputBuffer* oBuf, int delta){
@@ -269,7 +269,7 @@ void refresh(){
     appendToBuffer(&oBuf, padding, sizeof(padding));
     appendToBuffer(&oBuf, title, strlen(title));
     loadRows(&oBuf, -1);
-    appendreposCursorSequence(&oBuf, cursorPos.y, cursorPos.x);
+    appendreposCursorSequence(&oBuf, cursorPos.x, cursorPos.y);
     appendToBuffer(&oBuf, SHOW_CURSOR);
     terminalOut(oBuf.buf, oBuf.size);
     free(oBuf.buf);

@@ -164,10 +164,22 @@ void processKey(){
                 break; // Assume key = ESC
             if (seq[0] == '[') {
                   switch (seq[1]) {
-                      case 'A': cursorPos.x--; break; // Arrow left
-                      case 'B': cursorPos.x++; break; // Arrow right
-                      case 'C': cursorPos.y--; break; // Arrow up
-                      case 'D': cursorPos.y++; break; // Arrow down
+                      case 'A':
+                          if (cursorPos.x != 0)
+                              cursorPos.x--;
+                          break; // Arrow left
+                      case 'B':
+                          if (cursorPos.x++ != screencols-1)
+                              cursorPos.x++;
+                          break; // Arrow right
+                      case 'C':
+                          if (cursorPos.y != 0)
+                              cursorPos.y--;
+                          break; // Arrow up
+                      case 'D':
+                          if (cursorPos.y != screenrows -1)
+                              cursorPos.y++;
+                          break; // Arrow down
                   }
                 redraw();
                 }

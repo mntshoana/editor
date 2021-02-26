@@ -175,6 +175,19 @@ char readCharacter(){
         res = read(STDIN_FILENO, &seq[1], 1);
         if (res != 1) // if fails
             return c; // Assume key = ESC
+        if (seq[0] == 'O') {
+            switch (seq[1]) {
+                case 'H':// Home key
+                    cursorPos.x = 0;
+                    repositionCursor();
+                    break;
+                case 'F': // End
+                    cursorPos.x = screencols -1;
+                    repositionCursor();
+                    break;
+            }
+            return readCharacter();
+        }
         if (seq[0] == '[') {
             if (seq[1] >= '0' && seq[1] <= '9') {
                 // Check for longer sequence, needs one more char
@@ -190,6 +203,8 @@ char readCharacter(){
                         case '4': case '8': // End key
                             cursorPos.x = screencols -1;
                             repositionCursor();
+                            break;
+                        case '3': // Delete
                             break;
                         case '5': // Page up
                             break;

@@ -169,32 +169,71 @@ char readCharacter(){
     // Handle special keys
     if (c == '\x1b') {
         char seq[3];
-            res = read(STDIN_FILENO, &seq[0], 1);
-        if (res != 1) // read one more... and
+        res = read(STDIN_FILENO, &seq[0], 1);
+        if (res != 1) // if fails
             return c; // Assume key = ESC
-            res = read(STDIN_FILENO, &seq[1], 1);
-        if (res != 1) // another character
+        res = read(STDIN_FILENO, &seq[1], 1);
+        if (res != 1) // if fails
             return c; // Assume key = ESC
         if (seq[0] == '[') {
-          switch (seq[1]) {
-              case 'A':
-                  if (cursorPos.y > 1)
-                      cursorPos.y--;
-                  break; // Arrow up
-              case 'B':
-                  if (cursorPos.y < screenrows)
-                      cursorPos.y++;
-                  break; // Arrow down
-              case 'C':
-                  if (cursorPos.x < screencols)
-                      cursorPos.x++;
-                  break; // Arrow right
-              case 'D':
-                  if (cursorPos.x > 1)
-                      cursorPos.x--;
-                  break; // Arrow left
+            if (seq[1] >= '0' && seq[1] <= '9') {
+                // Check for longer sequence, needs one more char
+                res = read(STDIN_FILENO, &seq[2], 1);
+                if (res != 1) // if fails
+                    return c; // Assume key = ESC
+                if (seq[2] == '~') {
+                    switch (seq[1]) {
+                        case '1': case '7': // Home key
+                            cursorPos.x = 0;
+                            repositionCursor();
+                            break;
+                        case '4': case '8': // End key
+                            cursorPos.x = screencols -1;
+                            repositionCursor();
+                            break;
+                        case '5': // Page up
+                            break;
+                        case '6': // Page down
+                            break;
+                    }
+                    return readCharacter();
+                }
             }
-            repositionCursor();
+            switch (seq[1]) {
+              case 'A':
+                if (cursorPos.y > 1) {
+                    cursorPos.y--;
+                    repositionCursor();
+                }
+                break; // Arrow up
+              case 'B':
+                if (cursorPos.y < screenrows){
+                    cursorPos.y++;
+                    repositionCursor();
+                }
+                break; // Arrow down
+              case 'C':
+                if (cursorPos.x < screencols){
+                    cursorPos.x++;
+                    repositionCursor();
+                }
+                break; // Arrow right
+              case 'D':
+                if (cursorPos.x > 1){
+                  cursorPos.x--;
+                  repositionCursor();
+                }
+                break; // Arrow left
+              case 'H':{
+                  cursorPos.x = 0;
+                  repositionCursor();
+                }
+                break; // Home
+              case 'F':
+                  cursorPos.x = screencols -1;
+                  repositionCursor();
+                  break; // End
+            }
         }
         return readCharacter();
     }

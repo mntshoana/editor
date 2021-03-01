@@ -60,20 +60,34 @@ void refresh(){
     appendToBuffer(&oBuf, HIDE_CURSOR);
     appendToBuffer(&oBuf, CL_SCREEN_ALL);
     appendToBuffer(&oBuf, REPOS_CURSOR_TOP_LEFT);
-    
-    const char* title = "Welcome. feel free to type."
-                  " Press \"ctr+q\" to quit\r\n";
-    char padding [(screencols - strlen(title) ) / 2];
-    for (int i = 0; i < sizeof(padding); i++)
-        padding[i] = ' ';
-    
-    appendToBuffer(&oBuf, padding, sizeof(padding));
-    appendToBuffer(&oBuf, title, strlen(title));
-    loadRows(&oBuf, -1);
+    loadTitle(&oBuf); // 1 row
+    loadRows(&oBuf, -1); // - 1 for title row
     appendreposCursorSequence(&oBuf, cursorPos.x, cursorPos.y);
     appendToBuffer(&oBuf, SHOW_CURSOR);
     terminalOut(oBuf.buf, oBuf.size);
     free(oBuf.buf);
+}
+
+void loadTitle(struct outputBuffer* oBuf){
+    const char* title = "Welcome. feel free to type."
+                  " Press \"ctr+q\" to quit\r\n";
+    int len = (strlen(title) > screencols) ? screencols : strlen(title);
+    int paddingLen = (screencols - len ) / 2;
+    char padding [paddingLen];
+    for (int i = 0; i < paddingLen; i++)
+        padding[i] = ' ';
+    appendToBuffer(oBuf, padding, paddingLen);
+    appendToBuffer(oBuf, title, len);
+}
+void loadRows(struct outputBuffer* oBuf, int delta){
+    for (int y = 0; y < screenrows - 1 + delta; y++)
+        if (y < openedFileLines) {
+            int len = (openedFile.size > screencols) ? screencols : openedFile.size;
+            appendToBuffer(oBuf, openedFile.buf, len);
+        }
+        else
+            appendToBuffer(oBuf, "~\r\n", 3);
+    appendToBuffer(oBuf, "~", 1);
 }
 
 void editorSize() {
@@ -82,6 +96,7 @@ void editorSize() {
         failExit("Could not get the editor / terminal size");
     cursorPos.y =2;
     cursorPos.x =1;
+    openedFileLines = 0;
 }
 
 /*
@@ -133,6 +148,8 @@ int getWindowSize(int *rows, int *cols) {
  * Dynamically reallocates memory for outputting a string
  */
 void appendToBuffer(struct outputBuffer* out, const char* str, int len) {
+    if (len == 0)
+        return;
     char* ptr = realloc(out->buf, out->size + len);
     if (ptr == NULL)
       return; // failed to reallocate
@@ -285,9 +302,24 @@ void processKey(){
     };
 }
 
-
-void loadRows(struct outputBuffer* oBuf, int delta){
-    for (int y = 0; y < screenrows - 1 + delta; y++)
-        appendToBuffer(oBuf, "~\r\n", 3);
-    appendToBuffer(oBuf, "~", 1);
+void openFile(char* file) {
+    FILE* f = fopen(file, "r");
+    if (!f)
+        failExit("Could not open file");
+    char *line = NULL;
+    size_t size = 0;
+    int readCount = getline(&line, &size, f);
+    if (readCount != -1) {
+        while (readCount > 0 && (line[readCount - 1] == '\n'
+                || line[readCount - 1] == '\r') )
+            readCount--;
+               
+        openedFile.size = readCount;
+        openedFile.buf = malloc(openedFile.size + 1);
+        memcpy(openedFile.buf, line, openedFile.size);
+        openedFile.buf[openedFile.size] = '\0';
+        openedFileLines = 1;
+    }
+    free(line);
+    fclose(f);
 }

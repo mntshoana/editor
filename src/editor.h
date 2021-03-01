@@ -48,6 +48,9 @@ struct outputBuffer {
   int size;
 };
 
+int openedFileLines;
+struct outputBuffer openedFile;
+
 void failExit(const char *s);
 void turnOfFlags();
 void reset();
@@ -64,6 +67,8 @@ char readCharacter();
 void repositionCursor();
 void processKey();
 
+void loadTitle(struct outputBuffer* oBuf);
 void loadRows(struct outputBuffer* oBuf, int delta);
 
+void openFile(char* file);
 #endif // EDITOR_H

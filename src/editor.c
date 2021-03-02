@@ -60,8 +60,12 @@ void refresh(){
     appendToBuffer(&oBuf, HIDE_CURSOR);
     appendToBuffer(&oBuf, CL_SCREEN_ALL);
     appendToBuffer(&oBuf, REPOS_CURSOR_TOP_LEFT);
-    loadTitle(&oBuf); // 1 row
-    loadRows(&oBuf, -1); // - 1 for title row
+    if (openedFileLines == 0) {
+        loadTitle(&oBuf); // 1 row
+        loadRows(&oBuf, -1); // - 1 for title row
+    }
+    else loadRows(&oBuf, -openedFileLines +1);
+        
     appendreposCursorSequence(&oBuf, cursorPos.x, cursorPos.y);
     appendToBuffer(&oBuf, SHOW_CURSOR);
     terminalOut(oBuf.buf, oBuf.size);
@@ -84,6 +88,7 @@ void loadRows(struct outputBuffer* oBuf, int delta){
         if (y < openedFileLines) {
             int len = (openedFile.size > screencols) ? screencols : openedFile.size;
             appendToBuffer(oBuf, openedFile.buf, len);
+            appendToBuffer(oBuf, "\r\n", 2);
         }
         else
             appendToBuffer(oBuf, "~\r\n", 3);

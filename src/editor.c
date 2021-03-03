@@ -86,8 +86,8 @@ void loadTitle(struct outputBuffer* oBuf){
 void loadRows(struct outputBuffer* oBuf, int delta){
     for (int y = 0; y < screenrows - 1 + delta; y++)
         if (y < openedFileLines) {
-            int len = (openedFile.size > screencols) ? screencols : openedFile.size;
-            appendToBuffer(oBuf, openedFile.buf, len);
+            int len = (openedFile[y].size > screencols) ? screencols : openedFile[y].size;
+            appendToBuffer(oBuf, openedFile[y].buf, len);
             appendToBuffer(oBuf, "\r\n", 2);
         }
         else
@@ -102,6 +102,7 @@ void editorSize() {
     cursorPos.y =2;
     cursorPos.x =1;
     openedFileLines = 0;
+    openedFile = NULL;
 }
 
 /*
@@ -294,6 +295,9 @@ void processKey(){
         case controlKey('q'):
             terminalOut(CL_SCREEN_ALL);
             terminalOut(REPOS_CURSOR_TOP_LEFT);
+            for (int i = 0; i < openedFileLines; i++ )
+                free(openedFile[i].buf);
+            free(openedFile);
             exit(0);
             break;
         default:
@@ -313,17 +317,19 @@ void openFile(char* file) {
         failExit("Could not open file");
     char *line = NULL;
     size_t size = 0;
-    int readCount = getline(&line, &size, f);
-    if (readCount != -1) {
+    int readCount;
+    while ((readCount = getline(&line, &size, f))!= -1) {
         while (readCount > 0 && (line[readCount - 1] == '\n'
                 || line[readCount - 1] == '\r') )
             readCount--;
                
-        openedFile.size = readCount;
-        openedFile.buf = malloc(openedFile.size + 1);
-        memcpy(openedFile.buf, line, openedFile.size);
-        openedFile.buf[openedFile.size] = '\0';
-        openedFileLines = 1;
+        openedFile = realloc(openedFile, sizeof(struct outputBuffer) * (openedFileLines+1 ));
+        int i = openedFileLines;
+        openedFile[i].size = readCount;
+        openedFile[i].buf = malloc(readCount + 1);
+        memcpy(openedFile[i].buf, line, readCount);
+        openedFile[i].buf[readCount] = '\0';
+        openedFileLines += 1;
     }
     free(line);
     fclose(f);

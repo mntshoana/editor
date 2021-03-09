@@ -62,9 +62,10 @@ void refresh(){
     appendToBuffer(&oBuf, REPOS_CURSOR_TOP_LEFT);
     if (openedFileLines == 0) {
         loadTitle(&oBuf); // 1 row
+        cursorPos.y = 2;
         loadRows(&oBuf, -1); // - 1 for title row
     }
-    else loadRows(&oBuf, -openedFileLines +1);
+    else loadRows(&oBuf, 0);
         
     appendreposCursorSequence(&oBuf, cursorPos.x, cursorPos.y);
     appendToBuffer(&oBuf, SHOW_CURSOR);
@@ -84,23 +85,50 @@ void loadTitle(struct outputBuffer* oBuf){
     appendToBuffer(oBuf, title, len);
 }
 void loadRows(struct outputBuffer* oBuf, int delta){
-    for (int y = 0; y < screenrows - 1 + delta; y++)
-        if (y < openedFileLines) {
-            int len = (openedFile[y].size > screencols) ? screencols : openedFile[y].size;
-            appendToBuffer(oBuf, openedFile[y].buf, len);
+    scroll(); // scroll updates rowOffset to position
+    for (int y = 0; y < screenrows + delta; y++)
+        if (y + rowOffset < openedFileLines) { // display file contents
+            int pos = y + rowOffset;
+            int len = (openedFile[pos].size > screencols) ? screencols : openedFile[pos].size;
+            
+            char conv[5];
+            sprintf( conv, "%d", pos );
+            appendToBuffer(oBuf, conv, strlen(conv));
+
+            appendToBuffer(oBuf, openedFile[pos].buf, len);
             appendToBuffer(oBuf, "\r\n", 2);
+            if (y == screenrows + delta -1
+                && pos != openedFileLines -1)
+                appendToBuffer(oBuf, "...", 3 );
         }
-        else
-            appendToBuffer(oBuf, "~\r\n", 3);
-    appendToBuffer(oBuf, "~", 1);
+        else {
+            appendToBuffer(oBuf, "~", 1);
+            if (y < screenrows + delta - 1)
+                appendToBuffer(oBuf, "\r\n", 2);
+        }
+            
+}
+void scroll() {
+    // cursorPos.y is 1 based
+    if (cursorPos.y - 1 < rowOffset) {
+        rowOffset = cursorPos.y - 1; // cursor is above window, need to scroll up
+    }
+    // rowOffset = top of screen
+    // screenrows = size of screen
+    if (cursorPos.y >= rowOffset + screenrows) // cursor is below window,  need to scroll down
+        rowOffset = cursorPos.y - screenrows;
+    
 }
 
-void editorSize() {
+void editorInit() {
     int res = getWindowSize(&screenrows, &screencols);
     if (res == -1)
         failExit("Could not get the editor / terminal size");
-    cursorPos.y =2;
+    
+    // initialize rest of editor
+    cursorPos.y =1;
     cursorPos.x =1;
+    rowOffset = 0; // start by scrolling to the top
     openedFileLines = 0;
     openedFile = NULL;
 }
@@ -238,39 +266,39 @@ char readCharacter(){
                 }
             }
             switch (seq[1]) {
-              case 'A':
-                if (cursorPos.y > 1) {
+              case 'A': // Arrow up
+                if (cursorPos.y > 1) { // can never pass 1
                     cursorPos.y--;
                     repositionCursor();
                 }
-                break; // Arrow up
-              case 'B':
-                if (cursorPos.y < screenrows){
+                break;
+              case 'B': // Arrow down
+                if (cursorPos.y <= screenrows){
                     cursorPos.y++;
                     repositionCursor();
                 }
-                break; // Arrow down
-              case 'C':
+                break;
+              case 'C': // Arrow right
                 if (cursorPos.x < screencols){
                     cursorPos.x++;
                     repositionCursor();
                 }
-                break; // Arrow right
-              case 'D':
+                break;
+              case 'D': // Arrow left
                 if (cursorPos.x > 1){
                   cursorPos.x--;
                   repositionCursor();
                 }
-                break; // Arrow left
-              case 'H':{
+                break;
+              case 'H':{ // Home
                   cursorPos.x = 0;
                   repositionCursor();
                 }
-                break; // Home
-              case 'F':
+                break;
+              case 'F': // End
                   cursorPos.x = screencols -1;
                   repositionCursor();
-                  break; // End
+                  break;
             }
         }
         return readCharacter();

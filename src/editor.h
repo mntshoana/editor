@@ -42,6 +42,7 @@ struct pos {
 struct termios copyFlags;
 int screenrows;
 int screencols;
+int rowOffset; // to update pos as user scrolls 
 
 struct outputBuffer {
   char *buf;
@@ -56,7 +57,7 @@ void turnOfFlags();
 void reset();
 void refresh();
 
-void editorSize();
+void editorInit();
 int getWindowSize(int *rows, int *cols);
 
 void appendToBuffer(struct outputBuffer* out, const char* str, int len);
@@ -69,6 +70,7 @@ void processKey();
 
 void loadTitle(struct outputBuffer* oBuf);
 void loadRows(struct outputBuffer* oBuf, int delta);
+void scroll();
 
 void openFile(char* file);
 #endif // EDITOR_H

@@ -65,7 +65,7 @@ void refresh(){
         cursorPos.y = 2;
         loadRows(&oBuf, -1); // - 1 for title row
     }
-    else loadRows(&oBuf, 0);
+    else loadRows(&oBuf, -1); // for an empty bottom row
         
     appendreposCursorSequence(&oBuf, cursorPos.x, cursorPos.y);
     appendToBuffer(&oBuf, SHOW_CURSOR);
@@ -85,19 +85,20 @@ void loadTitle(struct outputBuffer* oBuf){
     appendToBuffer(oBuf, title, len);
 }
 void loadRows(struct outputBuffer* oBuf, int delta){
+    
     scroll(); // scroll updates rowOffset to position
     for (int y = 0; y < screenrows + delta; y++)
         if (y + rowOffset < openedFileLines) { // display file contents
             int pos = y + rowOffset;
             int len = (openedFile[pos].size > screencols) ? screencols : openedFile[pos].size;
             
-            char conv[5];
-            sprintf( conv, "%d", pos );
-            appendToBuffer(oBuf, conv, strlen(conv));
+            //char conv[5];
+            //sprintf( conv, "%d", pos );
+            //appendToBuffer(oBuf, conv, strlen(conv));
 
             appendToBuffer(oBuf, openedFile[pos].buf, len);
             appendToBuffer(oBuf, "\r\n", 2);
-            if (y == screenrows + delta -1
+            if (y == screenrows + delta - 1
                 && pos != openedFileLines -1)
                 appendToBuffer(oBuf, "...", 3 );
         }
@@ -110,14 +111,16 @@ void loadRows(struct outputBuffer* oBuf, int delta){
 }
 void scroll() {
     // cursorPos.y is 1 based
-    if (cursorPos.y - 1 < rowOffset) {
-        rowOffset = cursorPos.y - 1; // cursor is above window, need to scroll up
+    if (cursorPos.y < rowOffset && cursorPos.y == 0) {
+        --rowOffset; // cursor is above window, need to scroll up
     }
     // rowOffset = top of screen
     // screenrows = size of screen
-    if (cursorPos.y >= rowOffset + screenrows) // cursor is below window,  need to scroll down
+    else if (cursorPos.y >= rowOffset + screenrows){ // cursor is below window,  need to scroll down
         rowOffset = cursorPos.y - screenrows;
-    
+        //cursorPos.y -= 1; // return cursorPos to within screen range
+    }
+    repositionCursor();
 }
 
 void editorInit() {
@@ -267,13 +270,15 @@ char readCharacter(){
             }
             switch (seq[1]) {
               case 'A': // Arrow up
-                if (cursorPos.y > 1) { // can never pass 1
+                if (cursorPos.y > 0) { // can never pass 0, allow overscreen by 1
                     cursorPos.y--;
+                    if (cursorPos.y >= screenrows)
+                        cursorPos.y = screenrows; // return cursorPos to within screen range
                     repositionCursor();
                 }
                 break;
               case 'B': // Arrow down
-                if (cursorPos.y <= screenrows){
+                if (cursorPos.y <= openedFileLines){ // can never pass max, allow overscreen by 1
                     cursorPos.y++;
                     repositionCursor();
                 }
@@ -301,6 +306,7 @@ char readCharacter(){
                   break;
             }
         }
+        refresh();
         return readCharacter();
     }
     return c;

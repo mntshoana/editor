@@ -90,13 +90,13 @@ void loadRows(struct outputBuffer* oBuf, int delta){
     for (int y = 0; y < screenrows + delta; y++)
         if (y + rowOffset < openedFileLines) { // display file contents
             int pos = y + rowOffset;
-            int len = (openedFile[pos].size > screencols) ? screencols : openedFile[pos].size;
-            
+            int len = (openedFile[pos].size  - colOffset > screencols)
+                        ? (screencols)  :  (openedFile[pos].size - colOffset);
             //char conv[5];
             //sprintf( conv, "%d", pos );
             //appendToBuffer(oBuf, conv, strlen(conv));
-
-            appendToBuffer(oBuf, openedFile[pos].buf, len);
+            if (len > 0)
+                appendToBuffer(oBuf, openedFile[pos].buf + colOffset, len);
             appendToBuffer(oBuf, "\r\n", 2);
             if (y == screenrows + delta - 1
                 && pos != openedFileLines -1)
@@ -110,6 +110,7 @@ void loadRows(struct outputBuffer* oBuf, int delta){
             
 }
 void scroll() {
+    // VERTICAL SCROLLING
     // cursorPos.y is 1 based
     if (cursorPos.y < rowOffset && cursorPos.y == 0) {
         --rowOffset; // cursor is above window, need to scroll up
@@ -120,6 +121,13 @@ void scroll() {
         rowOffset = cursorPos.y - screenrows;
         //cursorPos.y -= 1; // return cursorPos to within screen range
     }
+    // HORIZONTAL SCROLLING
+    if (cursorPos.x < colOffset && cursorPos.x == 0) {
+        --colOffset;
+     }
+     if (cursorPos.x >= colOffset + screencols) {
+       colOffset = cursorPos.x - screencols + 1;
+     }
     repositionCursor();
 }
 
@@ -131,7 +139,8 @@ void editorInit() {
     // initialize rest of editor
     cursorPos.y =1;
     cursorPos.x =1;
-    rowOffset = 0; // start by scrolling to the top
+    rowOffset = 0; // represents an offset from to the top of 0
+    colOffset = 0; // represents an offset from the left of 0
     openedFileLines = 0;
     openedFile = NULL;
 }
@@ -284,14 +293,16 @@ char readCharacter(){
                 }
                 break;
               case 'C': // Arrow right
-                if (cursorPos.x < screencols){
+                //if (cursorPos.x < screencols){
                     cursorPos.x++;
                     repositionCursor();
-                }
+                //}
                 break;
               case 'D': // Arrow left
-                if (cursorPos.x > 1){
+                if (cursorPos.x > 0){
                   cursorPos.x--;
+                    if (cursorPos.x >= screencols)
+                        cursorPos.x = screencols; // return cursorPos to within screen range
                   repositionCursor();
                 }
                 break;

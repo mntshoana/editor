@@ -42,7 +42,8 @@ struct pos {
 struct termios copyFlags;
 int screenrows;
 int screencols;
-int rowOffset; // to update pos as user scrolls 
+int rowOffset; // to update pos as user scrolls up or down
+int colOffset; // to update pos as user scrolls left or right
 
 struct outputBuffer {
   char *buf;

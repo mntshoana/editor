@@ -293,10 +293,11 @@ char readCharacter(){
                 }
                 break;
               case 'C': // Arrow right
-                //if (cursorPos.x < screencols){
+                if (cursorPos.y < screenrows
+                    && cursorPos.x < openedFile[cursorPos.y].size){
                     cursorPos.x++;
                     repositionCursor();
-                //}
+                }
                 break;
               case 'D': // Arrow left
                 if (cursorPos.x > 0){

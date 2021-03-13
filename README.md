@@ -6,3 +6,7 @@ To build and run:
 make
 bin/main.o
 ````
+Feel free to use the app to open an existing textflle:
+````
+bin/main.o absolutePath/textfile.txt
+````

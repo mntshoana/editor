@@ -111,12 +111,14 @@ void loadRows(struct outputBuffer* oBuf, int delta){
 }
 void scroll() {
     // VERTICAL SCROLLING
-    // cursorPos.y is 1 based
+    // cursorPos.x and y are 1 based
+    // rowOffset = top of screen
+    // screenrows = size of screen
+    // Up
     if (cursorPos.y < rowOffset && cursorPos.y == 0) {
         --rowOffset; // cursor is above window, need to scroll up
     }
-    // rowOffset = top of screen
-    // screenrows = size of screen
+    // Down
     else if (cursorPos.y >= rowOffset + screenrows){ // cursor is below window,  need to scroll down
         rowOffset = cursorPos.y - screenrows;
         //cursorPos.y -= 1; // return cursorPos to within screen range
@@ -287,14 +289,15 @@ char readCharacter(){
                 }
                 break;
               case 'B': // Arrow down
-                if (cursorPos.y <= openedFileLines){ // can never pass max, allow overscreen by 1
+                if (cursorPos.y <= openedFileLines || cursorPos.y < screenrows){ // can never pass max, allow overscreen by 1
                     cursorPos.y++;
                     repositionCursor();
                 }
                 break;
               case 'C': // Arrow right
                 if (cursorPos.y < screenrows
-                    && cursorPos.x < openedFile[cursorPos.y].size){
+                    && openedFile
+                    && cursorPos.x < openedFile[cursorPos.y-1].size){
                     cursorPos.x++;
                     repositionCursor();
                 }
@@ -317,6 +320,12 @@ char readCharacter(){
                   repositionCursor();
                   break;
             }
+        }
+        // Snap to end of line
+        if (cursorPos.y < screenrows && openedFile) {
+          int currentRow =  openedFile[cursorPos.y-1].size;
+          if (cursorPos.x > currentRow)
+              cursorPos.x = currentRow;
         }
         refresh();
         return readCharacter();

@@ -308,7 +308,10 @@ char readCharacter(){
                     if (cursorPos.x >= screencols)
                         cursorPos.x = screencols; // return cursorPos to within screen range
                   repositionCursor();
-                }
+                } else if (cursorPos.y > 0) { // move up to the end of the previous line
+                    cursorPos.y--;
+                    cursorPos.x = openedFile[cursorPos.y-1].size;
+                  }
                 break;
               case 'H':{ // Home
                   cursorPos.x = 0;

@@ -296,21 +296,30 @@ char readCharacter(){
                 break;
               case 'C': // Arrow right
                 if (cursorPos.y < screenrows
-                    && openedFile
-                    && cursorPos.x < openedFile[cursorPos.y-1].size){
-                    cursorPos.x++;
-                    repositionCursor();
+                    && openedFile){
+                    if (cursorPos.x < openedFile[cursorPos.y-1].size){
+                        cursorPos.x++;
+                        repositionCursor();
+                    }
+                    else if (cursorPos.x == openedFile[cursorPos.y-1].size){
+                        cursorPos.y++;
+                        cursorPos.x = 1;
+                        repositionCursor();
+                    }
+                    
                 }
                 break;
               case 'D': // Arrow left
-                if (cursorPos.x > 0){
+                if (cursorPos.x > 1){
                   cursorPos.x--;
                     if (cursorPos.x >= screencols)
                         cursorPos.x = screencols; // return cursorPos to within screen range
-                  repositionCursor();
-                } else if (cursorPos.y > 0) { // move up to the end of the previous line
+                    repositionCursor();
+                }
+                else if (cursorPos.y > 0) { // move up to the end of the previous line
                     cursorPos.y--;
                     cursorPos.x = openedFile[cursorPos.y-1].size;
+                    repositionCursor();
                   }
                 break;
               case 'H':{ // Home
@@ -326,9 +335,9 @@ char readCharacter(){
         }
         // Snap to end of line
         if (cursorPos.y < screenrows && openedFile) {
-          int currentRow =  openedFile[cursorPos.y-1].size;
-          if (cursorPos.x > currentRow)
-              cursorPos.x = currentRow;
+          int currentRowEnd =  openedFile[cursorPos.y-1].size;
+          if (cursorPos.x > currentRowEnd)
+              cursorPos.x = currentRowEnd;
         }
         refresh();
         return readCharacter();

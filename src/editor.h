@@ -51,7 +51,7 @@ struct outputBuffer {
 };
 
 int openedFileLines;
-struct outputBuffer* openedFile;
+struct outputBuffer* openedFile, * outputToRender;
 
 void failExit(const char *s);
 void turnOfFlags();

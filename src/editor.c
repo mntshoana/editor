@@ -145,6 +145,7 @@ void editorInit() {
     colOffset = 0; // represents an offset from the left of 0
     openedFileLines = 0;
     openedFile = NULL;
+    outputToRender = NULL;
 }
 
 /*

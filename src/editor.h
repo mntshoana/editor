@@ -36,6 +36,7 @@
 #define SHOW_CURSOR "\x1b[?25h", 6
 // end of V100 escape sequences
 
+#define TAB_SPACES 8
 struct pos {
     int x, y;
 }cursorPos; // x, y elements begin from 1:n (not zero based)
@@ -51,7 +52,7 @@ struct outputBuffer {
 };
 
 int openedFileLines;
-struct outputBuffer* openedFile, * outputToRender;
+struct outputBuffer* openedFile;
 
 void failExit(const char *s);
 void turnOfFlags();

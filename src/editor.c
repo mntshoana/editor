@@ -145,7 +145,6 @@ void editorInit() {
     colOffset = 0; // represents an offset from the left of 0
     openedFileLines = 0;
     openedFile = NULL;
-    outputToRender = NULL;
 }
 
 /*
@@ -199,13 +198,38 @@ int getWindowSize(int *rows, int *cols) {
 void appendToBuffer(struct outputBuffer* out, const char* str, int len) {
     if (len == 0)
         return;
-    char* ptr = realloc(out->buf, out->size + len);
+    
+    // Searching for tabs
+    int tabs = 0;
+    for (int i = 0; i < len; i++)
+        if (str[i] == '\t')
+            tabs++;
+
+    // Allocate memory
+    char* ptr = realloc(out->buf, out->size + len + tabs*(TAB_SPACES - 1));
     if (ptr == NULL)
       return; // failed to reallocate
-
-    memcpy( &ptr[out->size], str, len);
-    out->buf = ptr;
-    out->size += len;
+    
+    // Append
+    if (tabs == 0){
+        memcpy( &ptr[out->size], str, len); // no tabs to render
+        out->buf = ptr;
+        out->size += len;
+    }
+    else {
+        int idx = out->size;
+          for (int i = 0; i < len; i++) {
+              if (str[i] == '\t') {
+                  ptr[idx++] = ' ';
+                  while (idx % TAB_SPACES != 0)
+                      ptr[idx++] = ' ';
+              } else
+                  ptr[idx++] = str[i];
+          }
+        out->buf = ptr;
+        out->size = idx;
+    }
+    
 }
 
 // Helper function to conver cursor positions to terminal sequence string
@@ -391,7 +415,7 @@ void openFile(char* file) {
                 || line[readCount - 1] == '\r') )
             readCount--;
                
-        openedFile = realloc(openedFile, sizeof(struct outputBuffer) * (openedFileLines+1 ));
+        openedFile = realloc(openedFile, sizeof(struct outputBuffer) * (openedFileLines + 1));
         int i = openedFileLines;
         openedFile[i].size = readCount;
         openedFile[i].buf = malloc(readCount + 1);

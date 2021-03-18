@@ -90,13 +90,13 @@ void loadRows(struct outputBuffer* oBuf, int delta){
     for (int y = 0; y < screenrows + delta; y++)
         if (y + rowOffset < openedFileLines) { // display file contents
             int pos = y + rowOffset;
-            int len = (openedFile[pos].size  - colOffset > screencols)
-                        ? (screencols)  :  (openedFile[pos].size - colOffset);
+            int len = (fromOpenedFile[pos].size  - colOffset > screencols)
+                        ? (screencols)  :  (fromOpenedFile[pos].size - colOffset);
             //char conv[5];
             //sprintf( conv, "%d", pos );
             //appendToBuffer(oBuf, conv, strlen(conv));
             if (len > 0)
-                appendToBuffer(oBuf, openedFile[pos].buf + colOffset, len);
+                appendToBuffer(oBuf, fromOpenedFile[pos].buf + colOffset, len);
             appendToBuffer(oBuf, "\r\n", 2);
             if (y == screenrows + delta - 1
                 && pos != openedFileLines -1)
@@ -144,7 +144,8 @@ void editorInit() {
     rowOffset = 0; // represents an offset from to the top of 0
     colOffset = 0; // represents an offset from the left of 0
     openedFileLines = 0;
-    openedFile = NULL;
+    fromOpenedFile = NULL;
+    toRenderToScreen = NULL;
 }
 
 /*
@@ -198,37 +199,16 @@ int getWindowSize(int *rows, int *cols) {
 void appendToBuffer(struct outputBuffer* out, const char* str, int len) {
     if (len == 0)
         return;
-    
-    // Searching for tabs
-    int tabs = 0;
-    for (int i = 0; i < len; i++)
-        if (str[i] == '\t')
-            tabs++;
 
     // Allocate memory
-    char* ptr = realloc(out->buf, out->size + len + tabs*(TAB_SPACES - 1));
+    char* ptr = realloc(out->buf, out->size + len );
     if (ptr == NULL)
       return; // failed to reallocate
     
     // Append
-    if (tabs == 0){
-        memcpy( &ptr[out->size], str, len); // no tabs to render
-        out->buf = ptr;
-        out->size += len;
-    }
-    else {
-        int idx = out->size;
-          for (int i = 0; i < len; i++) {
-              if (str[i] == '\t') {
-                  ptr[idx++] = ' ';
-                  while (idx % TAB_SPACES != 0)
-                      ptr[idx++] = ' ';
-              } else
-                  ptr[idx++] = str[i];
-          }
-        out->buf = ptr;
-        out->size = idx;
-    }
+    memcpy( &ptr[out->size], str, len);
+    out->buf = ptr;
+    out->size += len;
     
 }
 
@@ -308,8 +288,8 @@ char readCharacter(){
               case 'A': // Arrow up
                 if (cursorPos.y > 0) { // can never pass 0, allow overscreen by 1
                     cursorPos.y--;
-                    if (cursorPos.y >= screenrows)
-                        cursorPos.y = screenrows; // return cursorPos to within screen range
+                    if (cursorPos.y > screenrows)
+                        cursorPos.y = screenrows-1; // return cursorPos to within screen range
                     repositionCursor();
                 }
                 break;
@@ -321,12 +301,12 @@ char readCharacter(){
                 break;
               case 'C': // Arrow right
                 if (cursorPos.y < screenrows
-                    && openedFile){
-                    if (cursorPos.x < openedFile[cursorPos.y-1].size){
+                    && fromOpenedFile){
+                    if (cursorPos.x < toRenderToScreen[cursorPos.y-1 + rowOffset].size){
                         cursorPos.x++;
                         repositionCursor();
                     }
-                    else if (cursorPos.x == openedFile[cursorPos.y-1].size){
+                    else if (cursorPos.x == toRenderToScreen[cursorPos.y-1  + rowOffset].size){
                         cursorPos.y++;
                         cursorPos.x = 1;
                         repositionCursor();
@@ -343,7 +323,9 @@ char readCharacter(){
                 }
                 else if (cursorPos.y > 0) { // move up to the end of the previous line
                     cursorPos.y--;
-                    cursorPos.x = openedFile[cursorPos.y-1].size;
+                    if (cursorPos.y > screenrows)
+                        cursorPos.y = screenrows-1; // return cursorPos to within screen range
+                    cursorPos.x = toRenderToScreen[cursorPos.y - 1 + rowOffset].size;
                     repositionCursor();
                   }
                 break;
@@ -359,8 +341,8 @@ char readCharacter(){
             }
         }
         // Snap to end of line
-        if (cursorPos.y < screenrows && openedFile) {
-          int currentRowEnd =  openedFile[cursorPos.y-1].size;
+        if (cursorPos.y < screenrows && fromOpenedFile) {
+          int currentRowEnd = toRenderToScreen[cursorPos.y-1 + rowOffset].size;
           if (cursorPos.x > currentRowEnd)
               cursorPos.x = currentRowEnd;
         }
@@ -387,9 +369,12 @@ void processKey(){
         case controlKey('q'):
             terminalOut(CL_SCREEN_ALL);
             terminalOut(REPOS_CURSOR_TOP_LEFT);
-            for (int i = 0; i < openedFileLines; i++ )
-                free(openedFile[i].buf);
-            free(openedFile);
+            for (int i = 0; i < openedFileLines; i++ ){
+                free(fromOpenedFile[i].buf);
+                free(toRenderToScreen[i].buf);
+            }
+            free(fromOpenedFile);
+            free(toRenderToScreen);
             exit(0);
             break;
         default:
@@ -415,14 +400,53 @@ void openFile(char* file) {
                 || line[readCount - 1] == '\r') )
             readCount--;
                
-        openedFile = realloc(openedFile, sizeof(struct outputBuffer) * (openedFileLines + 1));
+        fromOpenedFile = realloc(fromOpenedFile, sizeof(struct outputBuffer) * (openedFileLines + 1));
         int i = openedFileLines;
-        openedFile[i].size = readCount;
-        openedFile[i].buf = malloc(readCount + 1);
-        memcpy(openedFile[i].buf, line, readCount);
-        openedFile[i].buf[readCount] = '\0';
+        fromOpenedFile[i].size = readCount;
+        fromOpenedFile[i].buf = malloc(readCount + 1);
+        memcpy(fromOpenedFile[i].buf, line, readCount);
+        fromOpenedFile[i].buf[readCount] = '\0';
+        
+        // Render tabs properly
+        toRenderToScreen = realloc(toRenderToScreen, sizeof(struct outputBuffer) * (openedFileLines + 1));
+        toRenderToScreen[i].size = 0;
+        toRenderToScreen[i].buf = NULL;
+        updateBuffer(&toRenderToScreen[i], &fromOpenedFile[i]);
+        
         openedFileLines += 1;
     }
     free(line);
     fclose(f);
+}
+
+void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src){
+    // Searching for tabs
+    int tabs = 0;
+    for (int i = 0; i < src->size; i++)
+        if (src->buf[i] == '\t')
+            tabs++;
+    
+    // allocate extra space
+    free(dest->buf);
+    dest->buf = malloc(src->size + tabs * (TAB_SPACES - 1));
+    
+    // Append
+    if (tabs == 0){
+        memcpy( dest->buf, src->buf, src->size); // no tabs to render
+        dest->buf[src->size] = '\0';
+        dest->size = src->size;
+    }
+    else {
+        int idx = 0;
+        for (int i = 0; i < src->size; i++) {
+            if (src->buf[i] == '\t') {
+                dest->buf[idx++] = ' ';
+                while (idx % TAB_SPACES != 0)
+                    dest->buf[idx++] = ' ';
+            } else
+                dest->buf[idx++] = src->buf[i];
+        }
+        dest->buf[idx] = '\0';
+        dest->size = idx-1;
+    }
 }

@@ -52,7 +52,7 @@ struct outputBuffer {
 };
 
 int openedFileLines;
-struct outputBuffer* openedFile;
+struct outputBuffer* fromOpenedFile, * toRenderToScreen;
 
 void failExit(const char *s);
 void turnOfFlags();
@@ -75,4 +75,5 @@ void loadRows(struct outputBuffer* oBuf, int delta);
 void scroll();
 
 void openFile(char* file);
+void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src);
 #endif // EDITOR_H

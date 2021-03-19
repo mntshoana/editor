@@ -256,6 +256,7 @@ char readCharacter(){
                     repositionCursor();
                     break;
             }
+            refresh();
             return readCharacter();
         }
         if (seq[0] == '[') {
@@ -277,10 +278,23 @@ char readCharacter(){
                         case '3': // Delete
                             break;
                         case '5': // Page up
+                            rowOffset -= screenrows;
+                            if (rowOffset < 0)
+                                rowOffset = 0;
                             break;
                         case '6': // Page down
+                            rowOffset += screenrows - 1;
+                            if (rowOffset + cursorPos.y > openedFileLines)
+                                rowOffset = openedFileLines - cursorPos.y;
                             break;
                     }
+                    // Snap to end of line
+                    if (cursorPos.y < screenrows && fromOpenedFile) {
+                      int currentRowEnd = toRenderToScreen[cursorPos.y-1 + rowOffset].size;
+                      if (cursorPos.x > currentRowEnd)
+                          cursorPos.x = currentRowEnd;
+                    }
+                    refresh();
                     return readCharacter();
                 }
             }
@@ -290,13 +304,11 @@ char readCharacter(){
                     cursorPos.y--;
                     if (cursorPos.y > screenrows)
                         cursorPos.y = screenrows-1; // return cursorPos to within screen range
-                    repositionCursor();
                 }
                 break;
               case 'B': // Arrow down
                 if (cursorPos.y <= openedFileLines || cursorPos.y < screenrows){ // can never pass max, allow overscreen by 1
                     cursorPos.y++;
-                    repositionCursor();
                 }
                 break;
               case 'C': // Arrow right
@@ -304,12 +316,10 @@ char readCharacter(){
                     && fromOpenedFile){
                     if (cursorPos.x < toRenderToScreen[cursorPos.y-1 + rowOffset].size){
                         cursorPos.x++;
-                        repositionCursor();
                     }
                     else if (cursorPos.x == toRenderToScreen[cursorPos.y-1  + rowOffset].size){
                         cursorPos.y++;
                         cursorPos.x = 1;
-                        repositionCursor();
                     }
                     
                 }
@@ -319,24 +329,20 @@ char readCharacter(){
                   cursorPos.x--;
                     if (cursorPos.x >= screencols)
                         cursorPos.x = screencols; // return cursorPos to within screen range
-                    repositionCursor();
                 }
                 else if (cursorPos.y > 0) { // move up to the end of the previous line
                     cursorPos.y--;
                     if (cursorPos.y > screenrows)
                         cursorPos.y = screenrows-1; // return cursorPos to within screen range
                     cursorPos.x = toRenderToScreen[cursorPos.y - 1 + rowOffset].size;
-                    repositionCursor();
                   }
                 break;
               case 'H':{ // Home
                   cursorPos.x = 0;
-                  repositionCursor();
                 }
                 break;
               case 'F': // End
                   cursorPos.x = screencols -1;
-                  repositionCursor();
                   break;
             }
         }

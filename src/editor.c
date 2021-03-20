@@ -268,12 +268,12 @@ char readCharacter(){
                 if (seq[2] == '~') {
                     switch (seq[1]) {
                         case '1': case '7': // Home key
-                            cursorPos.x = 0;
-                            repositionCursor();
+                            cursorPos.x = 1;
                             break;
                         case '4': case '8': // End key
-                            cursorPos.x = screencols -1;
-                            repositionCursor();
+                            if (cursorPos.y < openedFileLines && fromOpenedFile)
+                                cursorPos.x = toRenderToScreen[cursorPos.y -1 + rowOffset].size;
+                             
                             break;
                         case '3': // Delete
                             break;

@@ -273,7 +273,6 @@ char readCharacter(){
                         case '4': case '8': // End key
                             if (cursorPos.y < openedFileLines && fromOpenedFile)
                                 cursorPos.x = toRenderToScreen[cursorPos.y -1 + rowOffset].size;
-                             
                             break;
                         case '3': // Delete
                             break;
@@ -338,11 +337,12 @@ char readCharacter(){
                   }
                 break;
               case 'H':{ // Home
-                  cursorPos.x = 0;
+                    cursorPos.x = 1;
                 }
                 break;
               case 'F': // End
-                  cursorPos.x = screencols -1;
+                    if (cursorPos.y < openedFileLines && fromOpenedFile)
+                        cursorPos.x = toRenderToScreen[cursorPos.y -1 + rowOffset].size;
                   break;
             }
         }

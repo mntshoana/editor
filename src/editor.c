@@ -87,7 +87,7 @@ void loadTitle(struct outputBuffer* oBuf){
 void loadRows(struct outputBuffer* oBuf, int delta){
     
     scroll(); // scroll updates rowOffset to position
-    for (int y = 0; y < screenrows + delta; y++)
+    for (int y = 0; y <= screenrows + delta; y++)
         if (y + rowOffset < openedFileLines) { // display file contents
             int pos = y + rowOffset;
             int len = (fromOpenedFile[pos].size  - colOffset > screencols)
@@ -97,10 +97,9 @@ void loadRows(struct outputBuffer* oBuf, int delta){
             //appendToBuffer(oBuf, conv, strlen(conv));
             if (len > 0)
                 appendToBuffer(oBuf, fromOpenedFile[pos].buf + colOffset, len);
+            
             appendToBuffer(oBuf, "\r\n", 2);
-            if (y == screenrows + delta - 1
-                && pos != openedFileLines -1)
-                appendToBuffer(oBuf, "...", 3 );
+             
         }
         else {
             appendToBuffer(oBuf, "~", 1);
@@ -137,7 +136,8 @@ void editorInit() {
     int res = getWindowSize(&screenrows, &screencols);
     if (res == -1)
         failExit("Could not get the editor / terminal size");
-    
+    else
+        screenrows--; // make room for the status bar
     // initialize rest of editor
     cursorPos.y =1;
     cursorPos.x =1;
@@ -302,13 +302,15 @@ char readCharacter(){
                 if (cursorPos.y > 0) { // can never pass 0, allow overscreen by 1
                     cursorPos.y--;
                     if (cursorPos.y > screenrows)
-                        cursorPos.y = screenrows-1; // return cursorPos to within screen range
+                        cursorPos.y = screenrows; // return cursorPos to within screen range
                 }
                 break;
               case 'B': // Arrow down
                 if (cursorPos.y <= openedFileLines || cursorPos.y < screenrows){ // can never pass max, allow overscreen by 1
                     cursorPos.y++;
                 }
+                if (cursorPos.y <= 1)
+                    cursorPos.y = 2; // return cursorPos to within screen range, deliberately skip 1 for visual smoothness of scrolling
                 break;
               case 'C': // Arrow right
                 if (cursorPos.y < screenrows

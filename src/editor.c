@@ -108,6 +108,11 @@ void loadRows(struct outputBuffer* oBuf, int delta){
         }
             
 }
+
+void loadStatusBar(struct outputBuffer* oBuf){
+    
+}
+
 void scroll() {
     // VERTICAL SCROLLING
     // cursorPos.x and y are 1 based

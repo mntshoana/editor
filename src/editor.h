@@ -28,8 +28,8 @@
 #define CL_LINE_LEFT_OF_CURSOR "\x1b[1K", 4
 #define CL_LINE_ALL            "\x1b[2K", 4
 
-#define C_INVERT_COLOR "\x1b[7m", 4
-#define C_UNINVERT_COLOR "\x1b[m", 3
+#define CL_INVERT_COLOR "\x1b[7m", 4
+#define CL_UNINVERT_COLOR "\x1b[m", 3
 
 #define REPOS_CURSOR_TOP_LEFT  "\x1b[H", 3
 #define REPOS_CURSOR_BOTTOM_RIGHT "\x1b[999C\x1b[999B", 12

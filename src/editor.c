@@ -110,7 +110,8 @@ void loadRows(struct outputBuffer* oBuf, int delta){
 }
 
 void loadStatusBar(struct outputBuffer* oBuf){
-    
+    appendToBuffer(oBuf, CL_INVERT_COLOR);
+    appendToBuffer(oBuf, CL_UNINVERT_COLOR);
 }
 
 void scroll() {

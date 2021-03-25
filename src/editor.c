@@ -66,7 +66,8 @@ void refresh(){
         loadRows(&oBuf, -1); // - 1 for title row
     }
     else loadRows(&oBuf, -1); // for an empty bottom row
-        
+    
+    loadStatusBar(&oBuf);
     appendreposCursorSequence(&oBuf, cursorPos.x, cursorPos.y);
     appendToBuffer(&oBuf, SHOW_CURSOR);
     terminalOut(oBuf.buf, oBuf.size);
@@ -111,6 +112,9 @@ void loadRows(struct outputBuffer* oBuf, int delta){
 
 void loadStatusBar(struct outputBuffer* oBuf){
     appendToBuffer(oBuf, CL_INVERT_COLOR);
+    for (int width = 0; width < screencols; width++){
+        appendToBuffer(oBuf, " ", 1);
+    }
     appendToBuffer(oBuf, CL_UNINVERT_COLOR);
 }
 

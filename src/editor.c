@@ -115,7 +115,7 @@ void loadStatusBar(struct outputBuffer* oBuf){
     for (int width = 0; width < screencols; width++){
         appendToBuffer(oBuf, " ", 1);
     }
-    appendToBuffer(oBuf, CL_UNINVERT_COLOR);
+    appendToBuffer(oBuf, CL_FMT_CLEAR);
 }
 
 void scroll() {

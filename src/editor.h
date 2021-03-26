@@ -29,7 +29,10 @@
 #define CL_LINE_ALL            "\x1b[2K", 4
 
 #define CL_INVERT_COLOR "\x1b[7m", 4
-#define CL_UNINVERT_COLOR "\x1b[m", 3
+#define CL_FMT_BOLD "\x1b[1m", 4
+#define CL_FMT_UNDERSCORE "\x1b[4m", 4
+#define CL_FMT_BLINK "\x1b[5m", 4
+#define CL_FMT_CLEAR "\x1b[m", 3
 
 #define REPOS_CURSOR_TOP_LEFT  "\x1b[H", 3
 #define REPOS_CURSOR_BOTTOM_RIGHT "\x1b[999C\x1b[999B", 12
@@ -56,6 +59,7 @@ struct outputBuffer {
 
 int openedFileLines;
 struct outputBuffer* fromOpenedFile, * toRenderToScreen;
+char *filename;
 
 void failExit(const char *s);
 void turnOfFlags();

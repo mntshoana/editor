@@ -112,8 +112,24 @@ void loadRows(struct outputBuffer* oBuf, int delta){
 
 void loadStatusBar(struct outputBuffer* oBuf){
     appendToBuffer(oBuf, CL_INVERT_COLOR);
-    for (int width = 0; width < screencols; width++){
-        appendToBuffer(oBuf, " ", 1);
+    char status[80], rstatus[80];
+    int width = snprintf(status, sizeof(status),
+                         "%.20s - %d lines",
+                         filename ? filename : "[Unsaved File]",
+                         openedFileLines);
+    int rwidth = snprintf(rstatus, sizeof(rstatus),
+                          "%d/%d",
+                          cursorPos.y + rowOffset, openedFileLines);
+    if (width > screencols)
+        width = screencols;
+    appendToBuffer(oBuf, status, width);
+    for (; width < screencols; width++){
+        if (screencols - width == rwidth) {
+            appendToBuffer(oBuf, rstatus, rwidth);
+            break;
+        }
+        else
+            appendToBuffer(oBuf, " ", 1);
     }
     appendToBuffer(oBuf, CL_FMT_CLEAR);
 }
@@ -127,11 +143,17 @@ void scroll() {
     if (cursorPos.y < rowOffset && cursorPos.y == 0) {
         --rowOffset; // cursor is above window, need to scroll up
     }
+    if (cursorPos.y <= 1)
+        cursorPos.y = 1; // return cursorPos to within screen range, deliberately skip 1 for visual smoothness of scrolling
+    
     // Down
-    else if (cursorPos.y >= rowOffset + screenrows){ // cursor is below window,  need to scroll down
-        rowOffset = cursorPos.y - screenrows;
+    else if (cursorPos.y == screenrows +1 && cursorPos.y + rowOffset <= openedFileLines){ // cursor is below window,  need to scroll down
+        rowOffset++;
         //cursorPos.y -= 1; // return cursorPos to within screen range
     }
+    if (cursorPos.y > screenrows)
+        cursorPos.y = screenrows; // return cursorPos to within screen range
+    
     // HORIZONTAL SCROLLING
     if (cursorPos.x < colOffset && cursorPos.x == 0) {
         --colOffset;
@@ -156,6 +178,8 @@ void editorInit() {
     openedFileLines = 0;
     fromOpenedFile = NULL;
     toRenderToScreen = NULL;
+    
+    filename = NULL;
 }
 
 /*
@@ -311,24 +335,21 @@ char readCharacter(){
               case 'A': // Arrow up
                 if (cursorPos.y > 0) { // can never pass 0, allow overscreen by 1
                     cursorPos.y--;
-                    if (cursorPos.y > screenrows)
-                        cursorPos.y = screenrows; // return cursorPos to within screen range
                 }
                 break;
               case 'B': // Arrow down
-                if (cursorPos.y <= openedFileLines || cursorPos.y < screenrows){ // can never pass max, allow overscreen by 1
+                if (cursorPos.y <= screenrows){ // can never pass max, allow overscreen by 1
                     cursorPos.y++;
                 }
-                if (cursorPos.y <= 1)
-                    cursorPos.y = 2; // return cursorPos to within screen range, deliberately skip 1 for visual smoothness of scrolling
                 break;
               case 'C': // Arrow right
-                if (cursorPos.y < screenrows
+                if (cursorPos.y <= screenrows
                     && fromOpenedFile){
                     if (cursorPos.x < toRenderToScreen[cursorPos.y-1 + rowOffset].size){
                         cursorPos.x++;
                     }
-                    else if (cursorPos.x == toRenderToScreen[cursorPos.y-1  + rowOffset].size){
+                    else if (cursorPos.y < screenrows &&
+                    cursorPos.x == toRenderToScreen[cursorPos.y-1  + rowOffset].size){
                         cursorPos.y++;
                         cursorPos.x = 1;
                     }
@@ -393,6 +414,7 @@ void processKey(){
             }
             free(fromOpenedFile);
             free(toRenderToScreen);
+            free(filename);
             exit(0);
             break;
         default:
@@ -407,6 +429,8 @@ void processKey(){
 }
 
 void openFile(char* file) {
+    free(filename);
+    filename = strdup(file);
     FILE* f = fopen(file, "r");
     if (!f)
         failExit("Could not open file");

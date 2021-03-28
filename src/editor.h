@@ -13,6 +13,7 @@
 
 #include <sys/ioctl.h> // get the terminal size
 
+#include <time.h>
 
 // ctr + char maps to ASCII byte between 1 and 26
 #define controlKey(c) c & 0x1f
@@ -60,6 +61,9 @@ struct outputBuffer {
 int openedFileLines;
 struct outputBuffer* fromOpenedFile, * toRenderToScreen;
 char *filename;
+
+char statusmsg[80];
+time_t statusmsg_time;
 
 void failExit(const char *s);
 void turnOfFlags();

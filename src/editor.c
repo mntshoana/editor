@@ -180,6 +180,9 @@ void editorInit() {
     toRenderToScreen = NULL;
     
     filename = NULL;
+    
+    statusmsg[0] = '\0';
+    statusmsg_time = 0;
 }
 
 /*

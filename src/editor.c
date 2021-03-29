@@ -132,6 +132,24 @@ void loadStatusBar(struct outputBuffer* oBuf){
             appendToBuffer(oBuf, " ", 1);
     }
     appendToBuffer(oBuf, CL_FMT_CLEAR);
+    appendToBuffer(oBuf, "\r\n", 2);
+    
+    // Next Line: status message
+    appendToBuffer(oBuf, CL_LINE_RIGHT_OF_CURSOR);
+    int msgSize = strlen(statusmsg);
+    if (msgSize > screencols)
+        msgSize = screencols;
+    if (msgSize
+        && time(NULL) - statusmsg_time < 7)// message only displays for 7 seconds
+        appendToBuffer(oBuf, statusmsg, msgSize);
+}
+
+void loadStatusMessage(const char *fmt, ...){
+    va_list additionalArgs;
+    va_start(additionalArgs, fmt);
+    vsnprintf(statusmsg, sizeof(statusmsg), fmt, additionalArgs);
+    va_end(additionalArgs);
+    statusmsg_time = time(NULL);
 }
 
 void scroll() {
@@ -169,7 +187,7 @@ void editorInit() {
     if (res == -1)
         failExit("Could not get the editor / terminal size");
     else
-        screenrows--; // make room for the status bar
+        screenrows -= 2; // make room for the status bar
     // initialize rest of editor
     cursorPos.y =1;
     cursorPos.x =1;

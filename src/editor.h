@@ -14,6 +14,7 @@
 #include <sys/ioctl.h> // get the terminal size
 
 #include <time.h>
+#include <stdarg.h>
 
 // ctr + char maps to ASCII byte between 1 and 26
 #define controlKey(c) c & 0x1f
@@ -84,6 +85,8 @@ void processKey();
 void loadTitle(struct outputBuffer* oBuf);
 void loadRows(struct outputBuffer* oBuf, int delta);
 void loadStatusBar(struct outputBuffer* oBuf);
+void loadStatusMessage(const char *fmt, ...);
+
 void scroll();
 
 void openFile(char* file);

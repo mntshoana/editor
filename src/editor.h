@@ -91,4 +91,7 @@ void scroll();
 
 void openFile(char* file);
 void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src);
+
+
+void insertIntoBuffer(struct outputBuffer* buf, int at, int c);
 #endif // EDITOR_H

@@ -135,12 +135,12 @@ void loadStatusBar(struct outputBuffer* oBuf){
     appendToBuffer(oBuf, "\r\n", 2);
     
     // Next Line: status message
-    appendToBuffer(oBuf, CL_LINE_RIGHT_OF_CURSOR);
+    appendToBuffer(oBuf, CL_LINE_RIGHT_OF_CURSOR); // clear the status message
     int msgSize = strlen(statusmsg);
     if (msgSize > screencols)
         msgSize = screencols;
     if (msgSize
-        && time(NULL) - statusmsg_time < 7)// message only displays for 7 seconds
+        && time(NULL) - statusmsg_time < 7)// display message (for 7 seconds)
         appendToBuffer(oBuf, statusmsg, msgSize);
 }
 
@@ -512,4 +512,8 @@ void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src){
         dest->buf[idx] = '\0';
         dest->size = idx-1;
     }
+}
+
+void insertIntoBuffer(struct outputBuffer* buf, int at, int c){
+    
 }

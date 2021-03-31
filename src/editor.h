@@ -90,8 +90,10 @@ void loadStatusMessage(const char *fmt, ...);
 void scroll();
 
 void openFile(char* file);
+void appendNewLine(char* stringLine, int readCount);
 void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src);
 
 
 void insertIntoBuffer(struct outputBuffer* buf, int at, int c);
+void insertChar(int character);
 #endif // EDITOR_H

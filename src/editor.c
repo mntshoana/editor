@@ -366,13 +366,14 @@ char readCharacter(){
               case 'C': // Arrow right
                 if (cursorPos.y <= screenrows
                     && fromOpenedFile){
-                    if (cursorPos.x < toRenderToScreen[cursorPos.y-1 + rowOffset].size){
+                    if (cursorPos.x <= toRenderToScreen[cursorPos.y-1 + rowOffset].size){
                         cursorPos.x++;
                     }
                     else if (cursorPos.y < screenrows &&
-                    cursorPos.x == toRenderToScreen[cursorPos.y-1  + rowOffset].size){
+                    cursorPos.x == toRenderToScreen[cursorPos.y-1 + rowOffset].size + 1){
                         cursorPos.y++;
                         cursorPos.x = 1;
+                        colOffset = 0;
                     }
                     
                 }
@@ -387,7 +388,7 @@ char readCharacter(){
                     cursorPos.y--;
                     if (cursorPos.y > screenrows)
                         cursorPos.y = screenrows-1; // return cursorPos to within screen range
-                    cursorPos.x = toRenderToScreen[cursorPos.y - 1 + rowOffset].size;
+                    cursorPos.x = toRenderToScreen[cursorPos.y - 1 + rowOffset].size + 1;
                   }
                 break;
               case 'H':{ // Home
@@ -396,13 +397,13 @@ char readCharacter(){
                 break;
               case 'F': // End
                     if (cursorPos.y < openedFileLines && fromOpenedFile)
-                        cursorPos.x = toRenderToScreen[cursorPos.y -1 + rowOffset].size;
+                        cursorPos.x = toRenderToScreen[cursorPos.y -1 + rowOffset].size + 1;
                   break;
             }
         }
         // Snap to end of line
         if (cursorPos.y < screenrows && fromOpenedFile) {
-          int currentRowEnd = toRenderToScreen[cursorPos.y-1 + rowOffset].size;
+          int currentRowEnd = toRenderToScreen[cursorPos.y-1 + rowOffset].size + 1;
           if (cursorPos.x > currentRowEnd)
               cursorPos.x = currentRowEnd;
         }
@@ -442,10 +443,13 @@ void processKey(){
             // Print
             // remember ASCII 0–31 and 127 are control characters
             //                32–126 are all printable.
-            if (iscntrl(c))
+            /*if (iscntrl(c))
                 printf("%d\r\n", c);
             else
                 printf("%d ('%c')\r\n", c, c);
+             */
+            insertChar(c);
+            break;
     };
 }
 
@@ -463,23 +467,29 @@ void openFile(char* file) {
                 || line[readCount - 1] == '\r') )
             readCount--;
                
-        fromOpenedFile = realloc(fromOpenedFile, sizeof(struct outputBuffer) * (openedFileLines + 1));
-        int i = openedFileLines;
-        fromOpenedFile[i].size = readCount;
-        fromOpenedFile[i].buf = malloc(readCount + 1);
-        memcpy(fromOpenedFile[i].buf, line, readCount);
-        fromOpenedFile[i].buf[readCount] = '\0';
-        
-        // Render tabs properly
-        toRenderToScreen = realloc(toRenderToScreen, sizeof(struct outputBuffer) * (openedFileLines + 1));
-        toRenderToScreen[i].size = 0;
-        toRenderToScreen[i].buf = NULL;
-        updateBuffer(&toRenderToScreen[i], &fromOpenedFile[i]);
-        
-        openedFileLines += 1;
+        appendNewLine(line, readCount);
     }
     free(line);
     fclose(f);
+}
+
+// Adds a string to the end of the output buffer and the render buffer
+//  when opening a file or typing into the editor
+void appendNewLine(char* stringLine, int readCount){
+    fromOpenedFile = realloc(fromOpenedFile, sizeof(struct outputBuffer) * (openedFileLines + 1));
+    int i = openedFileLines;
+    fromOpenedFile[i].size = readCount;
+    fromOpenedFile[i].buf = malloc(readCount + 1);
+    memcpy(fromOpenedFile[i].buf, stringLine, readCount);
+    fromOpenedFile[i].buf[readCount] = '\0';
+    
+    // Render tabs properly
+    toRenderToScreen = realloc(toRenderToScreen, sizeof(struct outputBuffer) * (openedFileLines + 1));
+    toRenderToScreen[i].size = 0;
+    toRenderToScreen[i].buf = NULL;
+    updateBuffer(&toRenderToScreen[i], &fromOpenedFile[i]);
+    
+    openedFileLines += 1;
 }
 
 void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src){
@@ -491,7 +501,7 @@ void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src){
     
     // allocate extra space
     free(dest->buf);
-    dest->buf = malloc(src->size + tabs * (TAB_SPACES - 1));
+    dest->buf = malloc(src->size + tabs * (TAB_SPACES - 1) + 1); // + 1 is to make space for terminating null
     
     // Append
     if (tabs == 0){
@@ -510,10 +520,29 @@ void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src){
                 dest->buf[idx++] = src->buf[i];
         }
         dest->buf[idx] = '\0';
-        dest->size = idx-1;
+        dest->size = idx;
     }
 }
 
-void insertIntoBuffer(struct outputBuffer* buf, int at, int c){
+void insertIntoBuffer(struct outputBuffer* dest, int pos, int c){
+    if (pos < 0 || pos > dest->size)
+        pos = dest->size; // if not within the bounds of the existing line
     
+    // alocate memory for two more characters
+    dest->buf = realloc(dest->buf, dest->size + 2);
+    // move substring to make room for a single character
+    memmove(&dest->buf[pos + 1], &dest->buf[pos], (dest->size) - pos  );
+    // update buffer with new character
+    dest->buf[pos] = c;
+    dest->size++;
+    dest->buf[dest->size] = '\0';
+}
+
+void insertChar(int character) {
+    if (cursorPos.y == openedFileLines) {
+        appendNewLine("", 0);
+    }
+    insertIntoBuffer(&fromOpenedFile[cursorPos.y - 1], cursorPos.x - 1, character);
+    updateBuffer(&toRenderToScreen[cursorPos.y - 1], &fromOpenedFile[cursorPos.y - 1]);
+    cursorPos.x++;
 }

@@ -65,7 +65,7 @@ void refresh(){
         cursorPos.y = 2;
         loadRows(&oBuf, -1); // - 1 for title row
     }
-    else loadRows(&oBuf, -1); // for an empty bottom row
+    else loadRows(&oBuf, 0); // for an empty bottom row
     
     loadStatusBar(&oBuf);
     appendreposCursorSequence(&oBuf, cursorPos.x, cursorPos.y);
@@ -93,9 +93,7 @@ void loadRows(struct outputBuffer* oBuf, int delta){
             int pos = y + rowOffset;
             int len = (fromOpenedFile[pos].size  - colOffset > screencols)
                         ? (screencols)  :  (fromOpenedFile[pos].size - colOffset);
-            //char conv[5];
-            //sprintf( conv, "%d", pos );
-            //appendToBuffer(oBuf, conv, strlen(conv));
+            
             if (len > 0)
                 appendToBuffer(oBuf, fromOpenedFile[pos].buf + colOffset, len);
             
@@ -103,9 +101,10 @@ void loadRows(struct outputBuffer* oBuf, int delta){
              
         }
         else {
-            appendToBuffer(oBuf, "~", 1);
-            if (y < screenrows + delta - 1)
+            if (y < screenrows + delta){
+                appendToBuffer(oBuf, "~", 1);
                 appendToBuffer(oBuf, "\r\n", 2);
+            }
         }
             
 }
@@ -384,7 +383,7 @@ char readCharacter(){
                     if (cursorPos.x >= screencols)
                         cursorPos.x = screencols; // return cursorPos to within screen range
                 }
-                else if (cursorPos.y > 0) { // move up to the end of the previous line
+                else if (cursorPos.y > 0 && fromOpenedFile) { // move up to the end of the previous line
                     cursorPos.y--;
                     if (cursorPos.y > screenrows)
                         cursorPos.y = screenrows-1; // return cursorPos to within screen range
@@ -531,7 +530,8 @@ void insertIntoBuffer(struct outputBuffer* dest, int pos, int c){
     // alocate memory for two more characters
     dest->buf = realloc(dest->buf, dest->size + 2);
     // move substring to make room for a single character
-    memmove(&dest->buf[pos + 1], &dest->buf[pos], (dest->size) - pos  );
+    if (dest->size) // line not empty
+        memmove(&dest->buf[pos + 1], &dest->buf[pos], (dest->size) - pos  );
     // update buffer with new character
     dest->buf[pos] = c;
     dest->size++;
@@ -539,7 +539,12 @@ void insertIntoBuffer(struct outputBuffer* dest, int pos, int c){
 }
 
 void insertChar(int character) {
-    if (cursorPos.y == openedFileLines) {
+    if (!fromOpenedFile){
+        appendNewLine("", 0);
+        cursorPos.y = 1; // Move away from line two to line one
+                        // (away from the title line)
+    }
+    else if ( cursorPos.y - 1 == openedFileLines) {
         appendNewLine("", 0);
     }
     insertIntoBuffer(&fromOpenedFile[cursorPos.y - 1], cursorPos.x - 1, character);

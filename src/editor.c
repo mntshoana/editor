@@ -164,7 +164,7 @@ void scroll() {
         cursorPos.y = 1; // return cursorPos to within screen range, deliberately skip 1 for visual smoothness of scrolling
     
     // Down
-    else if (cursorPos.y == screenrows +1 && cursorPos.y + rowOffset <= openedFileLines){ // cursor is below window,  need to scroll down
+    else if (cursorPos.y == screenrows +1 && cursorPos.y + rowOffset < openedFileLines){ // cursor is below window,  need to scroll down
         rowOffset++;
         //cursorPos.y -= 1; // return cursorPos to within screen range
     }
@@ -343,7 +343,7 @@ char readCharacter(){
                     }
                     // Snap to end of line
                     if (cursorPos.y < screenrows && fromOpenedFile) {
-                      int currentRowEnd = toRenderToScreen[cursorPos.y-1 + rowOffset].size;
+                      int currentRowEnd = toRenderToScreen[cursorPos.y - 1 + rowOffset].size + 1;
                       if (cursorPos.x > currentRowEnd)
                           cursorPos.x = currentRowEnd;
                     }
@@ -365,11 +365,11 @@ char readCharacter(){
               case 'C': // Arrow right
                 if (cursorPos.y <= screenrows
                     && fromOpenedFile){
-                    if (cursorPos.x <= toRenderToScreen[cursorPos.y-1 + rowOffset].size){
+                    if (cursorPos.x <= toRenderToScreen[cursorPos.y + rowOffset].size){
                         cursorPos.x++;
                     }
                     else if (cursorPos.y < screenrows &&
-                    cursorPos.x == toRenderToScreen[cursorPos.y-1 + rowOffset].size + 1){
+                    cursorPos.x == toRenderToScreen[cursorPos.y + rowOffset].size + 1){
                         cursorPos.y++;
                         cursorPos.x = 1;
                         colOffset = 0;
@@ -387,7 +387,7 @@ char readCharacter(){
                     cursorPos.y--;
                     if (cursorPos.y > screenrows)
                         cursorPos.y = screenrows-1; // return cursorPos to within screen range
-                    cursorPos.x = toRenderToScreen[cursorPos.y - 1 + rowOffset].size + 1;
+                    cursorPos.x = toRenderToScreen[cursorPos.y + rowOffset].size + 1;
                   }
                 break;
               case 'H':{ // Home
@@ -396,13 +396,13 @@ char readCharacter(){
                 break;
               case 'F': // End
                     if (cursorPos.y < openedFileLines && fromOpenedFile)
-                        cursorPos.x = toRenderToScreen[cursorPos.y -1 + rowOffset].size + 1;
+                        cursorPos.x = toRenderToScreen[cursorPos.y + rowOffset].size + 1;
                   break;
             }
         }
         // Snap to end of line
         if (cursorPos.y < screenrows && fromOpenedFile) {
-          int currentRowEnd = toRenderToScreen[cursorPos.y-1 + rowOffset].size + 1;
+          int currentRowEnd = toRenderToScreen[cursorPos.y + rowOffset].size + 1;
           if (cursorPos.x > currentRowEnd)
               cursorPos.x = currentRowEnd;
         }
@@ -539,15 +539,18 @@ void insertIntoBuffer(struct outputBuffer* dest, int pos, int c){
 }
 
 void insertChar(int character) {
+    int yPos = cursorPos.y + rowOffset;
+    int xPos = cursorPos.x + colOffset - 1;
+    
     if (!fromOpenedFile){
-        appendNewLine("", 0);
-        cursorPos.y = 1; // Move away from line two to line one
-                        // (away from the title line)
+        appendNewLine("", 0); // There will be a title on the first line if no file is open
+        cursorPos.y = 1; // Currently on the line after the title
+        // Move to the title line (line one)
     }
-    else if ( cursorPos.y - 1 == openedFileLines) {
+    else if ( yPos == openedFileLines) { // buffer too small
         appendNewLine("", 0);
     }
-    insertIntoBuffer(&fromOpenedFile[cursorPos.y - 1], cursorPos.x - 1, character);
-    updateBuffer(&toRenderToScreen[cursorPos.y - 1], &fromOpenedFile[cursorPos.y - 1]);
+    insertIntoBuffer(&fromOpenedFile[yPos], xPos, character);
+    updateBuffer(&toRenderToScreen[yPos], &fromOpenedFile[yPos]);
     cursorPos.x++;
 }

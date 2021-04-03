@@ -328,6 +328,8 @@ char readCharacter(){
                             if (cursorPos.y < openedFileLines && fromOpenedFile)
                                 cursorPos.x = toRenderToScreen[cursorPos.y -1 + rowOffset].size;
                             break;
+                        case '127': // Backspace key
+                            break;
                         case '3': // Delete
                             break;
                         case '5': // Page up

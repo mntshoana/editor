@@ -328,10 +328,11 @@ char readCharacter(){
                             if (cursorPos.y < openedFileLines && fromOpenedFile)
                                 cursorPos.x = toRenderToScreen[cursorPos.y -1 + rowOffset].size;
                             break;
-                        case '127': // Backspace key
-                            break;
+                            
                         case '3': // Delete
+                            /* To Do */
                             break;
+ 
                         case '5': // Page up
                             rowOffset -= screenrows;
                             if (rowOffset < 0)
@@ -400,6 +401,7 @@ char readCharacter(){
                     if (cursorPos.y < openedFileLines && fromOpenedFile)
                         cursorPos.x = toRenderToScreen[cursorPos.y + rowOffset].size + 1;
                   break;
+
             }
         }
         // Snap to end of line
@@ -440,6 +442,16 @@ void processKey(){
             free(filename);
             exit(0);
             break;
+            
+        case '127':             // Backspace key
+        case controlKey('h'):
+            break;
+            
+        case controlKey('l'):   // Delete key
+        case '\x1b':
+              /* to Do*/
+              break;
+            
         default:
             // Print
             // remember ASCII 0–31 and 127 are control characters

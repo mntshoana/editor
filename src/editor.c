@@ -443,14 +443,19 @@ void processKey(){
             exit(0);
             break;
             
-        case '127':             // Backspace key
-        case controlKey('h'):
+        case '\r':          // Enter
+            /* To Do */
             break;
             
-        case controlKey('l'):   // Delete key
+        case '127':             // Backspace key
+        case controlKey('h'):
+            /* To Do */
+            break;
+            
+        case controlKey('l'):   // traditionally used to refresh the screen, we'll use as delete key
         case '\x1b':
-              /* to Do*/
-              break;
+            /* To Do */
+            break;
             
         default:
             // Print
@@ -567,4 +572,14 @@ void insertChar(int character) {
     insertIntoBuffer(&fromOpenedFile[yPos], xPos, character);
     updateBuffer(&toRenderToScreen[yPos], &fromOpenedFile[yPos]);
     cursorPos.x++;
+}
+
+char* prepareToString(int *outputBuffer){
+    int stringLength = 0;
+    // calculate sum of every line
+    // Todo
+    char* preparedString = malloc(stringLength);
+    // append lines to string
+    // Todo
+    return preparedString;
 }

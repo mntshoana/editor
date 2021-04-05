@@ -96,4 +96,6 @@ void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src);
 
 void insertIntoBuffer(struct outputBuffer* buf, int at, int c);
 void insertChar(int character);
+
+char* prepareToString(int *outputBuffer);
 #endif // EDITOR_H

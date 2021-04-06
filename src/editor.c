@@ -574,9 +574,12 @@ void insertChar(int character) {
     cursorPos.x++;
 }
 
-char* prepareToString(int *outputBuffer){
+char* prepareToString(int *bufferLength){
     int stringLength = 0;
-    // calculate sum of every line
+    for (int i = 0; i < openedFileLines; i++ )
+        stringLength += fromOpenedFile[i].size + 1; // add one to make room for the new line character
+    *bufferLength = stringLength;
+    
     // Todo
     char* preparedString = malloc(stringLength);
     // append lines to string

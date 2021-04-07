@@ -580,9 +580,13 @@ char* prepareToString(int *bufferLength){
         stringLength += fromOpenedFile[i].size + 1; // add one to make room for the new line character
     *bufferLength = stringLength;
     
-    // Todo
     char* preparedString = malloc(stringLength);
-    // append lines to string
-    // Todo
+    char* iter = prepareToString;
+    for (int i = 0; i < openedFileLines; i++){
+        memcpy(iter, fromOpenedFile[i].buf, fromOpenedFile[i].size);
+        iter += fromOpenedFile[i].size;
+        *iter = '\n';
+        iter++;
+    }
     return preparedString;
 }

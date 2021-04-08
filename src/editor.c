@@ -588,5 +588,13 @@ char* prepareToString(int *bufferLength){
         *iter = '\n';
         iter++;
     }
-    return preparedString;
+    return preparedString; // note, caller should free this
+}
+
+void saveFile(){
+    //
+    int len;
+    char *string = prepareToString(&len);
+    // ...
+    free(string);
 }

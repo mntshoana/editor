@@ -98,4 +98,5 @@ void insertIntoBuffer(struct outputBuffer* buf, int at, int c);
 void insertChar(int character);
 
 char* prepareToString(int *bufferLength);
+void saveFile();
 #endif // EDITOR_H

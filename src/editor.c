@@ -592,9 +592,14 @@ char* prepareToString(int *bufferLength){
 }
 
 void saveFile(){
-    //
+    if (filename == NULL)
+        return;
+    
     int len;
     char *string = prepareToString(&len);
-    // ...
+    int descriptor = open(filename , O_RDWR | O_CREAT, 0644); // Owner permission read + write, others only read
+    ftruncate(descriptor, len);
+    write(descriptor, string, len);
+    close(descriptor);
     free(string);
 }

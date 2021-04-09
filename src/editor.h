@@ -16,6 +16,8 @@
 #include <time.h>
 #include <stdarg.h>
 
+#include <fcntl.h> // to write to disk, need certain functions and constants
+
 // ctr + char maps to ASCII byte between 1 and 26
 #define controlKey(c) c & 0x1f
 

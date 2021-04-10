@@ -442,6 +442,10 @@ void processKey(){
             free(filename);
             exit(0);
             break;
+        
+        case controlKey('s'):
+            saveFile();
+            break;
             
         case '\r':          // Enter
             /* To Do */
@@ -598,8 +602,11 @@ void saveFile(){
     int len;
     char *string = prepareToString(&len);
     int descriptor = open(filename , O_RDWR | O_CREAT, 0644); // Owner permission read + write, others only read
-    ftruncate(descriptor, len);
-    write(descriptor, string, len);
-    close(descriptor);
+    if (descriptor != -1){
+        // TODO
+        ftruncate(descriptor, len);
+        write(descriptor, string, len);
+        close(descriptor);
+    }
     free(string);
 }

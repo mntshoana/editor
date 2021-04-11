@@ -5,7 +5,7 @@ int main (int argc, char* argv[]) {
     // First turn of Echo mode and canonical mode
     turnOfFlags();
     editorInit();
-    loadStatusMessage("Try: ctrl+Q to quit");
+    loadStatusMessage("Try: ctrl+Q to quit | ctrl+s to save");
     if (argc > 1)
         openFile(argv[1]);
     

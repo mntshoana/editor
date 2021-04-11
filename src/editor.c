@@ -603,10 +603,18 @@ void saveFile(){
     char *string = prepareToString(&len);
     int descriptor = open(filename , O_RDWR | O_CREAT, 0644); // Owner permission read + write, others only read
     if (descriptor != -1){
-        // TODO
-        ftruncate(descriptor, len);
-        write(descriptor, string, len);
+        int res = ftruncate(descriptor, len);
+        if (res != -1){
+            res = write(descriptor, string, len);
+            if (res == len){
+                close(descriptor);
+                free(string);
+                loadStatusMessage("Saved! %d bytes written to disk", len);
+                return;
+            }
+        }
         close(descriptor);
     }
     free(string);
+    loadStatusMessage("Error! Cannot save - I/O error details: %s", strerror(errno));
 }

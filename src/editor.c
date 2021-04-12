@@ -584,8 +584,8 @@ char* prepareToString(int *bufferLength){
         stringLength += fromOpenedFile[i].size + 1; // add one to make room for the new line character
     *bufferLength = stringLength;
     
-    char* preparedString = malloc(stringLength);
-    char* iter = prepareToString;
+    char* preparedString = (char*) malloc(stringLength);
+    char* iter = preparedString;
     for (int i = 0; i < openedFileLines; i++){
         memcpy(iter, fromOpenedFile[i].buf, fromOpenedFile[i].size);
         iter += fromOpenedFile[i].size;

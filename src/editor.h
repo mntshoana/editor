@@ -65,6 +65,8 @@ int openedFileLines;
 struct outputBuffer* fromOpenedFile, * toRenderToScreen;
 char *filename;
 
+int fileModified;
+
 char statusmsg[80];
 time_t statusmsg_time;
 

@@ -197,6 +197,7 @@ void editorInit() {
     toRenderToScreen = NULL;
     
     filename = NULL;
+    fileModified = 0;
     
     statusmsg[0] = '\0';
     statusmsg_time = 0;

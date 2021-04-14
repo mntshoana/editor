@@ -112,10 +112,11 @@ void loadRows(struct outputBuffer* oBuf, int delta){
 void loadStatusBar(struct outputBuffer* oBuf){
     appendToBuffer(oBuf, CL_INVERT_COLOR);
     char status[80], rstatus[80];
+    const char* modifiedStatus = fileModified ? "*modified": ""
     int width = snprintf(status, sizeof(status),
-                         "%.20s - %d lines",
-                         filename ? filename : "[Unsaved File]",
-                         openedFileLines);
+                         "%.20s - %d lines %s",
+                         filename
+                         ? filename : "[Unsaved File]", openedFileLines, modifiedStatus );
     int rwidth = snprintf(rstatus, sizeof(rstatus),
                           "%d/%d",
                           cursorPos.y + rowOffset, openedFileLines);
@@ -494,6 +495,7 @@ void openFile(char* file) {
     }
     free(line);
     fclose(f);
+    fileModified = 0;
 }
 
 // Adds a string to the end of the output buffer and the render buffer
@@ -513,6 +515,7 @@ void appendNewLine(char* stringLine, int readCount){
     updateBuffer(&toRenderToScreen[i], &fromOpenedFile[i]);
     
     openedFileLines += 1;
+    fileModified += 1;
 }
 
 void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src){
@@ -560,6 +563,7 @@ void insertIntoBuffer(struct outputBuffer* dest, int pos, int c){
     dest->buf[pos] = c;
     dest->size++;
     dest->buf[dest->size] = '\0';
+    fileModified += 1;
 }
 
 void insertChar(int character) {
@@ -610,6 +614,7 @@ void saveFile(){
             if (res == len){
                 close(descriptor);
                 free(string);
+                fileModified = 0;
                 loadStatusMessage("Saved! %d bytes written to disk", len);
                 return;
             }

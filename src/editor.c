@@ -112,7 +112,7 @@ void loadRows(struct outputBuffer* oBuf, int delta){
 void loadStatusBar(struct outputBuffer* oBuf){
     appendToBuffer(oBuf, CL_INVERT_COLOR);
     char status[80], rstatus[80];
-    const char* modifiedStatus = fileModified ? "*modified": ""
+    const char* modifiedStatus = fileModified ? "*modified": "";
     int width = snprintf(status, sizeof(status),
                          "%.20s - %d lines %s",
                          filename

@@ -435,9 +435,9 @@ void processKey(){
     switch (c) {
         case controlKey('q'):
             if (fileModified && quit_conf > 0){
-                loadStatusMessage("Alert!!! This file has unsaved changes. "
-                                  "Save your document using ctrl+s "
-                                  "or press ctrl+q again to quit without saving", quit_conf);
+                loadStatusMessage("Alert!!! There are unsaved changes. "
+                                  "Save using ctrl+s "
+                                  "or quit with ctrl+q again");
                 quit_conf--;
                 return; // so the count doesn't reset yet at the end of this function
             }

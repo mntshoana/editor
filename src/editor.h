@@ -98,8 +98,10 @@ void appendNewLine(char* stringLine, int readCount);
 void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src);
 
 
-void insertIntoBuffer(struct outputBuffer* buf, int at, int c);
+void insertIntoBuffer(struct outputBuffer* dest, int pos, int c);
 void insertChar(int character);
+void deleteFromBuffer(struct outputBuffer* dest, int at);
+void deleteChar();
 
 char* prepareToString(int *bufferLength);
 void saveFile();

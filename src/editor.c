@@ -332,7 +332,7 @@ char readCharacter(){
                             break;
                             
                         case '3': // Delete
-                            /* To Do */
+                            deleteChar();
                             break;
  
                         case '5': // Page up
@@ -461,16 +461,15 @@ void processKey(){
             /* To Do */
             break;
             
-        case '127':             // Backspace key
-        case controlKey('h'):
-            /* To Do */
+        case 127:             //  127 or Backspace key
+        case controlKey('h'):   // traditionally used to find and replace, bet we use to delete
+            //editorMoveCursor(ARROW_RIGHT);
+            deleteChar();
             break;
             
-        case controlKey('l'):   // traditionally used to refresh the screen, we'll use as delete key
-        case '\x1b':
-            /* To Do */
+        case controlKey('l'):   // traditionally used to refresh the screen
+            // todo
             break;
-            
         default:
             // Print
             // remember ASCII 0–31 and 127 are control characters
@@ -483,6 +482,7 @@ void processKey(){
             insertChar(c);
             break;
     };
+    printf("%d\r\n", c);
     quit_conf = 1;
 }
 
@@ -591,6 +591,31 @@ void insertChar(int character) {
     updateBuffer(&toRenderToScreen[yPos], &fromOpenedFile[yPos]);
     cursorPos.x++;
 }
+
+void deleteFromBuffer(struct outputBuffer* dest, int at){
+    if (at < 0 || at > dest->size)
+        return; // if not within the bounds of the existing line
+
+    memmove(&dest->buf[at], &dest->buf[at +1], dest->size - at);
+    dest->size--;
+    fileModified += 1;
+}
+
+void deleteChar(){
+    if (!fromOpenedFile){
+        return;
+    }
+    else {
+        int yPos = cursorPos.y + rowOffset;
+        int xPos = cursorPos.x + colOffset - 1;
+        if (xPos > 0){
+            deleteFromBuffer(&fromOpenedFile[yPos], xPos -1);
+            cursorPos.x--;
+            updateBuffer(&toRenderToScreen[yPos], &fromOpenedFile[yPos]);
+        }
+    }
+}
+
 
 char* prepareToString(int *bufferLength){
     int stringLength = 0;

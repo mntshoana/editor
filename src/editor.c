@@ -88,7 +88,7 @@ void loadTitle(struct outputBuffer* oBuf){
 void loadRows(struct outputBuffer* oBuf, int delta){
     
     scroll(); // scroll updates rowOffset to position
-    for (int y = 0; y <= screenrows + delta; y++)
+    for (int y = 0; y <= screenrows + delta - 1; y++)
         if (y + rowOffset < openedFileLines) { // display file contents
             int pos = y + rowOffset;
             int len = (fromOpenedFile[pos].size  - colOffset > screencols)
@@ -96,7 +96,7 @@ void loadRows(struct outputBuffer* oBuf, int delta){
             
             if (len > 0)
                 appendToBuffer(oBuf, fromOpenedFile[pos].buf + colOffset, len);
-            
+
             appendToBuffer(oBuf, "\r\n", 2);
              
         }
@@ -165,7 +165,7 @@ void scroll() {
         cursorPos.y = 1; // return cursorPos to within screen range, deliberately skip 1 for visual smoothness of scrolling
     
     // Down
-    else if (cursorPos.y == screenrows +1 && cursorPos.y + rowOffset < openedFileLines){ // cursor is below window,  need to scroll down
+    else if (cursorPos.y == screenrows +1 && cursorPos.y + rowOffset <= openedFileLines){ // cursor is below window,  need to scroll down
         rowOffset++;
         //cursorPos.y -= 1; // return cursorPos to within screen range
     }
@@ -327,8 +327,9 @@ char readCharacter(){
                             cursorPos.x = 1;
                             break;
                         case '4': case '8': // End key
-                            if (cursorPos.y < openedFileLines && fromOpenedFile)
-                                cursorPos.x = toRenderToScreen[cursorPos.y -1 + rowOffset].size;
+                            if (cursorPos.y + rowOffset < openedFileLines && fromOpenedFile)
+                                cursorPos.x = toRenderToScreen[cursorPos.y + rowOffset -1].size;
+                                
                             break;
                             
                         case '3': // Delete
@@ -370,11 +371,11 @@ char readCharacter(){
               case 'C': // Arrow right
                 if (cursorPos.y <= screenrows
                     && fromOpenedFile){
-                    if (cursorPos.x <= toRenderToScreen[cursorPos.y + rowOffset].size){
+                    if (cursorPos.x <= toRenderToScreen[cursorPos.y + rowOffset - 1].size){
                         cursorPos.x++;
                     }
                     else if (cursorPos.y < screenrows &&
-                    cursorPos.x == toRenderToScreen[cursorPos.y + rowOffset].size + 1){
+                    cursorPos.x == toRenderToScreen[cursorPos.y + rowOffset -1].size + 1){
                         cursorPos.y++;
                         cursorPos.x = 1;
                         colOffset = 0;
@@ -392,7 +393,7 @@ char readCharacter(){
                     cursorPos.y--;
                     if (cursorPos.y > screenrows)
                         cursorPos.y = screenrows-1; // return cursorPos to within screen range
-                    cursorPos.x = toRenderToScreen[cursorPos.y + rowOffset].size + 1;
+                    cursorPos.x = toRenderToScreen[cursorPos.y + rowOffset -1].size + 1;
                   }
                 break;
               case 'H':{ // Home
@@ -401,14 +402,14 @@ char readCharacter(){
                 break;
               case 'F': // End
                     if (cursorPos.y < openedFileLines && fromOpenedFile)
-                        cursorPos.x = toRenderToScreen[cursorPos.y + rowOffset].size + 1;
+                        cursorPos.x = toRenderToScreen[cursorPos.y + rowOffset -1].size + 1;
                   break;
 
             }
         }
         // Snap to end of line
-        if (cursorPos.y < screenrows && fromOpenedFile) {
-          int currentRowEnd = toRenderToScreen[cursorPos.y + rowOffset].size + 1;
+        if (cursorPos.y > 0 && cursorPos.y <= screenrows +1 && fromOpenedFile) {
+          int currentRowEnd = toRenderToScreen[cursorPos.y + rowOffset -1].size + 1;
           if (cursorPos.x > currentRowEnd)
               cursorPos.x = currentRowEnd;
         }
@@ -576,7 +577,7 @@ void insertIntoBuffer(struct outputBuffer* dest, int pos, int c){
 }
 
 void insertChar(int character) {
-    int yPos = cursorPos.y + rowOffset;
+    int yPos = cursorPos.y + rowOffset - 1;
     int xPos = cursorPos.x + colOffset - 1;
     
     if (!fromOpenedFile){
@@ -606,7 +607,7 @@ void deleteChar(){
         return;
     }
     else {
-        int yPos = cursorPos.y + rowOffset;
+        int yPos = cursorPos.y + rowOffset - 1;
         int xPos = cursorPos.x + colOffset - 1;
         if (xPos > 0){
             deleteFromBuffer(&fromOpenedFile[yPos], xPos -1);

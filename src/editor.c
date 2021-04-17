@@ -157,6 +157,7 @@ void scroll() {
     // cursorPos.x and y are 1 based
     // rowOffset = top of screen
     // screenrows = size of screen
+    
     // Up
     if (cursorPos.y < rowOffset && cursorPos.y == 0) {
         --rowOffset; // cursor is above window, need to scroll up
@@ -464,22 +465,15 @@ void processKey(){
             
         case 127:             //  127 or Backspace key
         case controlKey('h'):   // traditionally used to find and replace, bet we use to delete
-            //editorMoveCursor(ARROW_RIGHT);
             deleteChar();
             break;
             
         case controlKey('l'):   // traditionally used to refresh the screen
-            // todo
+            // Do nothing
+        case '\x1b':            // Escape key
+            // Do nothing
             break;
         default:
-            // Print
-            // remember ASCII 0–31 and 127 are control characters
-            //                32–126 are all printable.
-            /*if (iscntrl(c))
-                printf("%d\r\n", c);
-            else
-                printf("%d ('%c')\r\n", c, c);
-             */
             insertChar(c);
             break;
     };
@@ -537,7 +531,7 @@ void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src){
     
     // allocate extra space
     free(dest->buf);
-    dest->buf = malloc(src->size + tabs * (TAB_SPACES - 1) + 1); // + 1 is to make space for terminating null
+    dest->buf = malloc(src->size + tabs * (TAB_SPACES - 1) + 1); // + 1 is to make space for null
     
     // Append
     if (tabs == 0){
@@ -583,7 +577,7 @@ void insertChar(int character) {
     if (!fromOpenedFile){
         appendNewLine("", 0); // There will be a title on the first line if no file is open
         cursorPos.y = 1; // Currently on the line after the title
-        // Move to the title line (line one)
+        // Move so as to write on the title line (line one)
     }
     else if ( yPos == openedFileLines) { // buffer too small
         appendNewLine("", 0);

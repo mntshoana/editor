@@ -611,6 +611,9 @@ void deleteChar(){
     }
 }
 
+void deleteRow(){
+    // Todo
+}
 
 char* prepareToString(int *bufferLength){
     int stringLength = 0;

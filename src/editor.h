@@ -102,6 +102,7 @@ void insertIntoBuffer(struct outputBuffer* dest, int pos, int c);
 void insertChar(int character);
 void deleteFromBuffer(struct outputBuffer* dest, int at);
 void deleteChar();
+void deleteRow();
 
 char* prepareToString(int *bufferLength);
 void saveFile();

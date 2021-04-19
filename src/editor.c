@@ -522,6 +522,15 @@ void appendNewLine(char* stringLine, int readCount){
     fileModified += 1;
 }
 
+void appendString(struct outputBuffer* source, int line, char* string, size_t len){
+    source[line].buf = realloc(source[line].buf, source[line].size + len +1);
+    memcpy(&source[line].buf[source[line].size], string, len);
+    source[line].size += len;
+    source[line].buf[source[line].size] = '\0';
+    updateBuffer(&toRenderToScreen[line], &fromOpenedFile[line]);
+    fileModified += 1;
+}
+
 void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src){
     // Searching for tabs
     int tabs = 0;
@@ -590,7 +599,7 @@ void insertChar(int character) {
 void deleteFromBuffer(struct outputBuffer* dest, int at){
     if (at < 0 || at > dest->size)
         return; // if not within the bounds of the existing line
-
+    
     memmove(&dest->buf[at], &dest->buf[at +1], dest->size - at);
     dest->size--;
     fileModified += 1;
@@ -608,11 +617,27 @@ void deleteChar(){
             cursorPos.x--;
             updateBuffer(&toRenderToScreen[yPos], &fromOpenedFile[yPos]);
         }
+        else if (xPos == 0 && yPos > 0){
+            cursorPos.x = fromOpenedFile[yPos - 1].size + 1;
+            cursorPos.y--;
+            appendString(fromOpenedFile, yPos - 1, fromOpenedFile[yPos].buf, fromOpenedFile[yPos].size);
+            deleteRow(yPos);
+        }
     }
 }
 
-void deleteRow(){
-    // Todo
+void deleteRow(int at){
+    if (at < 0 || at >= openedFileLines)
+        return;
+    
+    free(fromOpenedFile[at].buf);
+    free(toRenderToScreen[at].buf);
+    
+    memmove(&fromOpenedFile[at], &fromOpenedFile[at + 1], sizeof(struct outputBuffer) * (openedFileLines - at -1) );
+    memmove(&toRenderToScreen[at], &toRenderToScreen[at + 1], sizeof(struct outputBuffer) * (openedFileLines - at -1) );
+    
+    openedFileLines--;
+    fileModified++;
 }
 
 char* prepareToString(int *bufferLength){

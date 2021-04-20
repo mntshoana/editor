@@ -74,115 +74,6 @@ void refresh(){
     free(oBuf.buf);
 }
 
-void loadTitle(struct outputBuffer* oBuf){
-    const char* title = "Welcome. feel free to type."
-                  " Press \"ctr+q\" to quit\r\n";
-    int len = (strlen(title) > screencols) ? screencols : strlen(title);
-    int paddingLen = (screencols - len ) / 2;
-    char padding [paddingLen];
-    for (int i = 0; i < paddingLen; i++)
-        padding[i] = ' ';
-    appendToBuffer(oBuf, padding, paddingLen);
-    appendToBuffer(oBuf, title, len);
-}
-void loadRows(struct outputBuffer* oBuf, int delta){
-    
-    scroll(); // scroll updates rowOffset to position
-    for (int y = 0; y <= screenrows + delta - 1; y++)
-        if (y + rowOffset < openedFileLines) { // display file contents
-            int pos = y + rowOffset;
-            int len = (fromOpenedFile[pos].size  - colOffset > screencols)
-                        ? (screencols)  :  (fromOpenedFile[pos].size - colOffset);
-            
-            if (len > 0)
-                appendToBuffer(oBuf, fromOpenedFile[pos].buf + colOffset, len);
-
-            appendToBuffer(oBuf, "\r\n", 2);
-             
-        }
-        else {
-            if (y < screenrows + delta){
-                appendToBuffer(oBuf, "~", 1);
-                appendToBuffer(oBuf, "\r\n", 2);
-            }
-        }
-            
-}
-
-void loadStatusBar(struct outputBuffer* oBuf){
-    appendToBuffer(oBuf, CL_INVERT_COLOR);
-    char status[80], rstatus[80];
-    const char* modifiedStatus = fileModified ? "*modified": "";
-    int width = snprintf(status, sizeof(status),
-                         "%.20s - %d lines %s",
-                         filename
-                         ? filename : "[Unsaved File]", openedFileLines, modifiedStatus );
-    int rwidth = snprintf(rstatus, sizeof(rstatus),
-                          "%d/%d",
-                          cursorPos.y + rowOffset, openedFileLines);
-    if (width > screencols)
-        width = screencols;
-    appendToBuffer(oBuf, status, width);
-    for (; width < screencols; width++){
-        if (screencols - width == rwidth) {
-            appendToBuffer(oBuf, rstatus, rwidth);
-            break;
-        }
-        else
-            appendToBuffer(oBuf, " ", 1);
-    }
-    appendToBuffer(oBuf, CL_FMT_CLEAR);
-    appendToBuffer(oBuf, "\r\n", 2);
-    
-    // Next Line: status message
-    appendToBuffer(oBuf, CL_LINE_RIGHT_OF_CURSOR); // clear the status message
-    int msgSize = strlen(statusmsg);
-    if (msgSize > screencols)
-        msgSize = screencols;
-    if (msgSize
-        && time(NULL) - statusmsg_time < 7)// display message (for 7 seconds)
-        appendToBuffer(oBuf, statusmsg, msgSize);
-}
-
-void loadStatusMessage(const char *fmt, ...){
-    va_list additionalArgs;
-    va_start(additionalArgs, fmt);
-    vsnprintf(statusmsg, sizeof(statusmsg), fmt, additionalArgs);
-    va_end(additionalArgs);
-    statusmsg_time = time(NULL);
-}
-
-void scroll() {
-    // VERTICAL SCROLLING
-    // cursorPos.x and y are 1 based
-    // rowOffset = top of screen
-    // screenrows = size of screen
-    
-    // Up
-    if (cursorPos.y < rowOffset && cursorPos.y == 0) {
-        --rowOffset; // cursor is above window, need to scroll up
-    }
-    if (cursorPos.y <= 1)
-        cursorPos.y = 1; // return cursorPos to within screen range, deliberately skip 1 for visual smoothness of scrolling
-    
-    // Down
-    else if (cursorPos.y == screenrows +1 && cursorPos.y + rowOffset <= openedFileLines){ // cursor is below window,  need to scroll down
-        rowOffset++;
-        //cursorPos.y -= 1; // return cursorPos to within screen range
-    }
-    if (cursorPos.y > screenrows)
-        cursorPos.y = screenrows; // return cursorPos to within screen range
-    
-    // HORIZONTAL SCROLLING
-    if (cursorPos.x < colOffset && cursorPos.x == 0) {
-        --colOffset;
-     }
-     if (cursorPos.x >= colOffset + screencols) {
-       colOffset = cursorPos.x - screencols + 1;
-     }
-    repositionCursor();
-}
-
 void editorInit() {
     int res = getWindowSize(&screenrows, &screencols);
     if (res == -1)
@@ -250,6 +141,7 @@ int getWindowSize(int *rows, int *cols) {
 }
 
 
+
 /* appendToBuffer
  * Dynamically reallocates memory for outputting a string
  */
@@ -283,6 +175,8 @@ void appendreposCursorSequence(struct outputBuffer* out, int x, int y) {
  int terminalOut(const char *sequence, int count){
     return write(STDOUT_FILENO, sequence, count);
 }
+
+
 
 char readCharacter(){
     // read character
@@ -481,6 +375,116 @@ void processKey(){
     quit_conf = 1;
 }
 
+void loadTitle(struct outputBuffer* oBuf){
+    const char* title = "Welcome. feel free to type."
+                  " Press \"ctr+q\" to quit\r\n";
+    int len = (strlen(title) > screencols) ? screencols : strlen(title);
+    int paddingLen = (screencols - len ) / 2;
+    char padding [paddingLen];
+    for (int i = 0; i < paddingLen; i++)
+        padding[i] = ' ';
+    appendToBuffer(oBuf, padding, paddingLen);
+    appendToBuffer(oBuf, title, len);
+}
+void loadRows(struct outputBuffer* oBuf, int delta){
+    
+    scroll(); // scroll updates rowOffset to position
+    for (int y = 0; y <= screenrows + delta - 1; y++)
+        if (y + rowOffset < openedFileLines) { // display file contents
+            int pos = y + rowOffset;
+            int len = (fromOpenedFile[pos].size  - colOffset > screencols)
+                        ? (screencols)  :  (fromOpenedFile[pos].size - colOffset);
+            
+            if (len > 0)
+                appendToBuffer(oBuf, fromOpenedFile[pos].buf + colOffset, len);
+
+            appendToBuffer(oBuf, "\r\n", 2);
+             
+        }
+        else {
+            if (y < screenrows + delta){
+                appendToBuffer(oBuf, "~", 1);
+                appendToBuffer(oBuf, "\r\n", 2);
+            }
+        }
+            
+}
+
+void loadStatusBar(struct outputBuffer* oBuf){
+    appendToBuffer(oBuf, CL_INVERT_COLOR);
+    char status[80], rstatus[80];
+    const char* modifiedStatus = fileModified ? "*modified": "";
+    int width = snprintf(status, sizeof(status),
+                         "%.20s - %d lines %s",
+                         filename
+                         ? filename : "[Unsaved File]", openedFileLines, modifiedStatus );
+    int rwidth = snprintf(rstatus, sizeof(rstatus),
+                          "%d/%d",
+                          cursorPos.y + rowOffset, openedFileLines);
+    if (width > screencols)
+        width = screencols;
+    appendToBuffer(oBuf, status, width);
+    for (; width < screencols; width++){
+        if (screencols - width == rwidth) {
+            appendToBuffer(oBuf, rstatus, rwidth);
+            break;
+        }
+        else
+            appendToBuffer(oBuf, " ", 1);
+    }
+    appendToBuffer(oBuf, CL_FMT_CLEAR);
+    appendToBuffer(oBuf, "\r\n", 2);
+    
+    // Next Line: status message
+    appendToBuffer(oBuf, CL_LINE_RIGHT_OF_CURSOR); // clear the status message
+    int msgSize = strlen(statusmsg);
+    if (msgSize > screencols)
+        msgSize = screencols;
+    if (msgSize
+        && time(NULL) - statusmsg_time < 7)// display message (for 7 seconds)
+        appendToBuffer(oBuf, statusmsg, msgSize);
+}
+
+void loadStatusMessage(const char *fmt, ...){
+    va_list additionalArgs;
+    va_start(additionalArgs, fmt);
+    vsnprintf(statusmsg, sizeof(statusmsg), fmt, additionalArgs);
+    va_end(additionalArgs);
+    statusmsg_time = time(NULL);
+}
+
+void scroll() {
+    // VERTICAL SCROLLING
+    // cursorPos.x and y are 1 based
+    // rowOffset = top of screen
+    // screenrows = size of screen
+    
+    // Up
+    if (cursorPos.y < rowOffset && cursorPos.y == 0) {
+        --rowOffset; // cursor is above window, need to scroll up
+    }
+    if (cursorPos.y <= 1)
+        cursorPos.y = 1; // return cursorPos to within screen range, deliberately skip 1 for visual smoothness of scrolling
+    
+    // Down
+    else if (cursorPos.y == screenrows +1 && cursorPos.y + rowOffset <= openedFileLines){ // cursor is below window,  need to scroll down
+        rowOffset++;
+        //cursorPos.y -= 1; // return cursorPos to within screen range
+    }
+    if (cursorPos.y > screenrows)
+        cursorPos.y = screenrows; // return cursorPos to within screen range
+    
+    // HORIZONTAL SCROLLING
+    if (cursorPos.x < colOffset && cursorPos.x == 0) {
+        --colOffset;
+     }
+     if (cursorPos.x >= colOffset + screencols) {
+       colOffset = cursorPos.x - screencols + 1;
+     }
+    repositionCursor();
+}
+
+
 void openFile(char* file) {
     free(filename);
     filename = strdup(file);
@@ -495,40 +499,11 @@ void openFile(char* file) {
                 || line[readCount - 1] == '\r') )
             readCount--;
                
-        appendNewLine(line, readCount);
+        insertNewLine(openedFileLines,  line, readCount);
     }
     free(line);
     fclose(f);
     fileModified = 0;
-}
-
-// Adds a string to the end of the output buffer and the render buffer
-//  when opening a file or typing into the editor
-void appendNewLine(char* stringLine, int readCount){
-    fromOpenedFile = realloc(fromOpenedFile, sizeof(struct outputBuffer) * (openedFileLines + 1));
-    int i = openedFileLines;
-    fromOpenedFile[i].size = readCount;
-    fromOpenedFile[i].buf = malloc(readCount + 1);
-    memcpy(fromOpenedFile[i].buf, stringLine, readCount);
-    fromOpenedFile[i].buf[readCount] = '\0';
-    
-    // Render tabs properly
-    toRenderToScreen = realloc(toRenderToScreen, sizeof(struct outputBuffer) * (openedFileLines + 1));
-    toRenderToScreen[i].size = 0;
-    toRenderToScreen[i].buf = NULL;
-    updateBuffer(&toRenderToScreen[i], &fromOpenedFile[i]);
-    
-    openedFileLines += 1;
-    fileModified += 1;
-}
-
-void appendString(struct outputBuffer* source, int line, char* string, size_t len){
-    source[line].buf = realloc(source[line].buf, source[line].size + len +1);
-    memcpy(&source[line].buf[source[line].size], string, len);
-    source[line].size += len;
-    source[line].buf[source[line].size] = '\0';
-    updateBuffer(&toRenderToScreen[line], &fromOpenedFile[line]);
-    fileModified += 1;
 }
 
 void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src){
@@ -563,6 +538,45 @@ void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src){
     }
 }
 
+// Adds a string to the end of the output buffer and the render buffer
+//  when opening a file or typing into the editor
+void insertNewLine(int at, char* stringLine, int readCount){
+    if (at < 0 || at > openedFileLines)
+        return;
+    
+    // Reallocate memory to allow for enough space
+    fromOpenedFile = realloc(fromOpenedFile, sizeof(struct outputBuffer) * (openedFileLines + 1));
+    // shift contents to make room for insertion
+    memmove(&fromOpenedFile[at+1], &fromOpenedFile[at],
+            sizeof(struct outputBuffer) * (openedFileLines - at));
+    
+    
+    fromOpenedFile[at].size = readCount;
+    fromOpenedFile[at].buf = malloc(readCount + 1);
+    memcpy(fromOpenedFile[at].buf, stringLine, readCount);
+    fromOpenedFile[at].buf[readCount] = '\0';
+    
+    // Render tabs properly
+    toRenderToScreen = realloc(toRenderToScreen, sizeof(struct outputBuffer) * (openedFileLines + 1));
+    toRenderToScreen[at].size = 0;
+    toRenderToScreen[at].buf = NULL;
+    updateBuffer(&toRenderToScreen[at], &fromOpenedFile[at]);
+    
+    openedFileLines += 1;
+    fileModified += 1;
+}
+
+void appendString(struct outputBuffer* source, int line, char* string, size_t len){
+    source[line].buf = realloc(source[line].buf, source[line].size + len +1);
+    memcpy(&source[line].buf[source[line].size], string, len);
+    source[line].size += len;
+    source[line].buf[source[line].size] = '\0';
+    updateBuffer(&toRenderToScreen[line], &fromOpenedFile[line]);
+    fileModified += 1;
+}
+
+
+
 void insertIntoBuffer(struct outputBuffer* dest, int pos, int c){
     if (pos < 0 || pos > dest->size)
         pos = dest->size; // if not within the bounds of the existing line
@@ -584,12 +598,12 @@ void insertChar(int character) {
     int xPos = cursorPos.x + colOffset - 1;
     
     if (!fromOpenedFile){
-        appendNewLine("", 0); // There will be a title on the first line if no file is open
+        insertNewLine(openedFileLines, "", 0); // There will be a title on the first line if no file is open
         cursorPos.y = 1; // Currently on the line after the title
         // Move so as to write on the title line (line one)
     }
     else if ( yPos == openedFileLines) { // buffer too small
-        appendNewLine("", 0);
+        insertNewLine(openedFileLines, "", 0);
     }
     insertIntoBuffer(&fromOpenedFile[yPos], xPos, character);
     updateBuffer(&toRenderToScreen[yPos], &fromOpenedFile[yPos]);

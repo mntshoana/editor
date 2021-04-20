@@ -70,6 +70,8 @@ int fileModified;
 char statusmsg[80];
 time_t statusmsg_time;
 
+
+
 void failExit(const char *s);
 void turnOfFlags();
 void reset();
@@ -94,15 +96,18 @@ void loadStatusMessage(const char *fmt, ...);
 void scroll();
 
 void openFile(char* file);
-void appendNewLine(char* stringLine, int readCount);
+
+
 void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src);
 
+void insertNewLine(int at, char* stringLine, int readCount);
+void appendString(struct outputBuffer* source, int line, char* string, size_t len);
 
 void insertIntoBuffer(struct outputBuffer* dest, int pos, int c);
 void insertChar(int character);
 void deleteFromBuffer(struct outputBuffer* dest, int at);
 void deleteChar();
-void deleteRow();
+void deleteRow(int at);
 
 char* prepareToString(int *bufferLength);
 void saveFile();

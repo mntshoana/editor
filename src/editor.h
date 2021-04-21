@@ -105,6 +105,7 @@ void appendString(struct outputBuffer* source, int line, char* string, size_t le
 
 void insertIntoBuffer(struct outputBuffer* dest, int pos, int c);
 void insertChar(int character);
+void insertLine();
 void deleteFromBuffer(struct outputBuffer* dest, int at);
 void deleteChar();
 void deleteRow(int at);

@@ -610,6 +610,9 @@ void insertChar(int character) {
     cursorPos.x++;
 }
 
+void insertLine(){
+    // To do when pressing enter
+}
 void deleteFromBuffer(struct outputBuffer* dest, int at){
     if (at < 0 || at > dest->size)
         return; // if not within the bounds of the existing line

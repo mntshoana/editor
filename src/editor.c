@@ -354,7 +354,7 @@ void processKey(){
             break;
             
         case '\r':          // Enter
-            /* To Do */
+            insertLine();
             break;
             
         case 127:             //  127 or Backspace key
@@ -611,7 +611,25 @@ void insertChar(int character) {
 }
 
 void insertLine(){
-    // To do when pressing enter
+    // when pressing enter
+    int yPos = cursorPos.y + rowOffset - 1;
+    int xPos = cursorPos.x + colOffset - 1;
+    if (xPos == 0){ // Add an empty line
+        insertNewLine(yPos, "", 0);
+    }
+    else{
+        struct outputBuffer *ref = &fromOpenedFile[yPos];
+        insertNewLine(yPos + 1, &ref->buf[xPos], ref->size - xPos);
+        
+        ref = &fromOpenedFile[yPos];
+        ref->size = xPos;
+        ref->buf[ref->size] = '\0';
+
+        updateBuffer(&toRenderToScreen[yPos], &fromOpenedFile[yPos]);
+    }
+    cursorPos.y++;
+    cursorPos.x = 1;
+    
 }
 void deleteFromBuffer(struct outputBuffer* dest, int at){
     if (at < 0 || at > dest->size)

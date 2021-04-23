@@ -93,6 +93,9 @@ void loadRows(struct outputBuffer* oBuf, int delta);
 void loadStatusBar(struct outputBuffer* oBuf);
 void loadStatusMessage(const char *fmt, ...);
 
+void char* userPrompt(char* message);
+
+
 void scroll();
 
 void openFile(char* file);

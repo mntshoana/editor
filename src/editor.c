@@ -453,6 +453,10 @@ void loadStatusMessage(const char *fmt, ...){
     statusmsg_time = time(NULL);
 }
 
+void char* userPrompt(char* message){
+    // Todo
+}
+
 void scroll() {
     // VERTICAL SCROLLING
     // cursorPos.x and y are 1 based

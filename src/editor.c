@@ -454,7 +454,33 @@ void loadStatusMessage(const char *fmt, ...){
 }
 
 void char* userPrompt(char* message){
-    // Todo
+    size_t inputSize = 128;
+    char* input = malloc(inputSize);
+    input[0] = '\0';
+    
+    size_t len = 0;
+    
+    while (true){
+        loadStatusMessage(message, input);
+        refresh(); // allows to see input on screen
+        
+        int charIn = readCharacter();
+        if (c == "\r"){
+            // exit prompt
+            if (len != 0) {
+                loadStatusMessage("");
+                return input;
+            }
+        }
+        else if (!iscntrl(charIn) && charIn < 128){
+            if (len == inputSize - 1){
+                inputSize *= 2;
+                input = realloc(input, inputSize);
+            }
+            input[len++] = charIn;
+            input[len] = '\0';
+        }
+    }
 }
 
 void scroll() {

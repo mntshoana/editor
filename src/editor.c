@@ -63,6 +63,7 @@ void refresh(){
     if (openedFileLines == 0) {
         loadTitle(&oBuf); // 1 row
         cursorPos.y = 2;
+        cursorPos.x = 2;
         loadRows(&oBuf, -1); // - 1 for title row
     }
     else loadRows(&oBuf, 0); // for an empty bottom row
@@ -284,7 +285,7 @@ char readCharacter(){
                     if (cursorPos.x >= screencols)
                         cursorPos.x = screencols; // return cursorPos to within screen range
                 }
-                else if (cursorPos.y > 0 && fromOpenedFile) { // move up to the end of the previous line
+                else if (cursorPos.y > 1 && fromOpenedFile) { // move up to the end of the previous line
                     cursorPos.y--;
                     if (cursorPos.y > screenrows)
                         cursorPos.y = screenrows-1; // return cursorPos to within screen range
@@ -453,19 +454,30 @@ void loadStatusMessage(const char *fmt, ...){
     statusmsg_time = time(NULL);
 }
 
-void char* userPrompt(char* message){
+char* userPrompt(char* message){
     size_t inputSize = 128;
     char* input = malloc(inputSize);
     input[0] = '\0';
     
     size_t len = 0;
     
-    while (true){
+    while (1){
         loadStatusMessage(message, input);
         refresh(); // allows to see input on screen
         
         int charIn = readCharacter();
-        if (c == "\r"){
+        if (charIn == '\x1b'){  // Escape key
+            loadStatusMessage("");
+            free(input);
+            return NULL;
+        }
+        if (charIn == 127){ // Backspace
+            if (len != 0){
+                len--;
+                input[len] = '\0';
+            }
+        }
+        else if (charIn == '\r'){
             // exit prompt
             if (len != 0) {
                 loadStatusMessage("");
@@ -577,9 +589,10 @@ void insertNewLine(int at, char* stringLine, int readCount){
     // Reallocate memory to allow for enough space
     fromOpenedFile = realloc(fromOpenedFile, sizeof(struct outputBuffer) * (openedFileLines + 1));
     // shift contents to make room for insertion
-    memmove(&fromOpenedFile[at+1], &fromOpenedFile[at],
-            sizeof(struct outputBuffer) * (openedFileLines - at));
-    
+    if (at +1 < openedFileLines){
+        memmove(&fromOpenedFile[at+1], &fromOpenedFile[at],
+                sizeof(struct outputBuffer) * (openedFileLines - at));
+    }
     
     fromOpenedFile[at].size = readCount;
     fromOpenedFile[at].buf = malloc(readCount + 1);
@@ -628,9 +641,13 @@ void insertChar(int character) {
     int xPos = cursorPos.x + colOffset - 1;
     
     if (!fromOpenedFile){
-        insertNewLine(openedFileLines, "", 0); // There will be a title on the first line if no file is open
-        cursorPos.y = 1; // Currently on the line after the title
-        // Move so as to write on the title line (line one)
+        // Currently on the line after the title
+        // because no file is open
+        cursorPos.y = 1;
+        cursorPos.x = 1;
+        xPos = 0;
+        yPos = 0;
+        insertNewLine(openedFileLines, "", 0);
     }
     else if ( yPos == openedFileLines) { // buffer too small
         insertNewLine(openedFileLines, "", 0);
@@ -723,8 +740,10 @@ char* prepareToString(int *bufferLength){
 }
 
 void saveFile(){
-    if (filename == NULL)
-        return;
+    if (filename == NULL){
+        filename = userPrompt("Save as : %s");
+        // Status bar is able to use formated string markers
+    }
     
     int len;
     char *string = prepareToString(&len);

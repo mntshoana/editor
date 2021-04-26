@@ -742,7 +742,12 @@ char* prepareToString(int *bufferLength){
 void saveFile(){
     if (filename == NULL){
         filename = userPrompt("Save as : %s");
-        // Status bar is able to use formated string markers
+        // Status bar uses formated strings
+        if (filename == NULL){
+            loadStatusMessage("Save aborted.");
+            return;
+        }
+            
     }
     
     int len;

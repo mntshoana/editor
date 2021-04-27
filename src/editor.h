@@ -115,4 +115,6 @@ void deleteRow(int at);
 
 char* prepareToString(int *bufferLength);
 void saveFile();
+
+void search();
 #endif // EDITOR_H

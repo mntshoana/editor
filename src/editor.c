@@ -471,7 +471,7 @@ char* userPrompt(char* message){
             free(input);
             return NULL;
         }
-        if (charIn == 127){ // Backspace
+        if ( charIn == (controlKey('h') )|| charIn == 127){ // Backspace
             if (len != 0){
                 len--;
                 input[len] = '\0';
@@ -769,4 +769,8 @@ void saveFile(){
     }
     free(string);
     loadStatusMessage("Error! Cannot save - I/O error details: %s", strerror(errno));
+}
+
+void search(){
+    // Todo
 }

@@ -354,7 +354,11 @@ void processKey(){
             saveFile();
             break;
             
-        case '\r':          // Enter
+        case controlKey('f'):
+            search();
+            break;
+            
+        case '\r':            // Enter
             insertLine();
             break;
             
@@ -471,7 +475,7 @@ char* userPrompt(char* message){
             free(input);
             return NULL;
         }
-        if ( charIn == (controlKey('h') )|| charIn == 127){ // Backspace
+        else if ( charIn == (controlKey('h') )|| charIn == 127){ // Backspace
             if (len != 0){
                 len--;
                 input[len] = '\0';
@@ -772,5 +776,23 @@ void saveFile(){
 }
 
 void search(){
-    // Todo
+    char* query = userPrompt("Search: %s (ESC to cancel)");
+    if (query == NULL)
+        return;
+    
+    for (int i = 0; i < openedFileLines; i++){
+        struct outputBuffer* line = &toRenderToScreen[i];
+        char* match = strstr(line->buf, query);
+        if (match){
+            cursorPos.y = i+1;
+            cursorPos.x = match - line->buf +1;
+            if (cursorPos.y > screenrows)
+                rowOffset = cursorPos.y - screenrows -1;
+            else
+                rowOffset = cursorPos.y - 1;
+            cursorPos.y = 1;
+            break;
+        }
+    }
+    free(query);
 }

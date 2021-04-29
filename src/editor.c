@@ -276,6 +276,8 @@ char readCharacter(){
                         cursorPos.x = 1;
                         colOffset = 0;
                     }
+                    // Tabs checker
+                    // Todo iclude tab
                     
                 }
                 break;
@@ -530,6 +532,34 @@ void scroll() {
     repositionCursor();
 }
 
+int zeroTabs(struct outputBuffer* line, int* xPos){
+    int i = 0;
+    
+    int idx = 0;
+    while ( idx < *xPos - 1) {
+        if (line->buf[i] == '\t') {
+            idx++;
+            while (idx % TAB_SPACES != 0)
+                idx++;
+        }
+        else
+            idx++;
+        // End of loop
+        i++; // increment
+    }
+
+    *xPos = i + 1;
+    return idx + 1;;
+}
+
+int addTabs(struct outputBuffer* line, int xPos){
+    int index = zeroTabs(line, &xPos);
+    return index;
+}
+int subtractTabs(struct outputBuffer* line, int* xPos){
+    int index = zeroTabs(line, &xPos);
+    return *xPos;
+}
 
 void openFile(char* file) {
     free(filename);

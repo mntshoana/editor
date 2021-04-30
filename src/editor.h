@@ -99,7 +99,7 @@ char* userPrompt(char* message);
 void scroll();
 int zeroTabs(struct outputBuffer* line, int* xPos);
 int addTabs(struct outputBuffer* line, int xPos);
-int subtractTabs(struct outputBuffer* line, int* xPos);
+int subtractTabs(struct outputBuffer* line, int xPos);
 
 void openFile(char* file);
 

@@ -243,6 +243,10 @@ char readCharacter(){
                                 rowOffset = openedFileLines - cursorPos.y;
                             break;
                     }
+                    // Consider tabs
+                    struct outputBuffer* line = &fromOpenedFile[cursorPos.y + rowOffset - 1];
+                    cursorPos.x = addTabs(line, cursorPos.x );
+                    
                     // Snap to end of line
                     if (cursorPos.y < screenrows && fromOpenedFile) {
                       int currentRowEnd = toRenderToScreen[cursorPos.y - 1 + rowOffset].size + 1;
@@ -263,6 +267,7 @@ char readCharacter(){
                 if (cursorPos.y <= screenrows){ // can never pass max, allow overscreen by 1
                     cursorPos.y++;
                 }
+                    
                 break;
               case 'C': // Arrow right
                 if (cursorPos.y <= screenrows
@@ -276,23 +281,29 @@ char readCharacter(){
                         cursorPos.x = 1;
                         colOffset = 0;
                     }
-                    // Tabs checker
-                    // Todo iclude tab
                     
                 }
                 break;
               case 'D': // Arrow left
                 if (cursorPos.x > 1){
-                  cursorPos.x--;
-                    if (cursorPos.x >= screencols)
+                    // Consider tabs
+                    struct outputBuffer* line = &fromOpenedFile[cursorPos.y + rowOffset - 1];
+                    cursorPos.x = subtractTabs(line, cursorPos.x);
+                    cursorPos.x = addTabs(line, cursorPos.x - 1);
+                    
+                    if (cursorPos.x >= screencols){
                         cursorPos.x = screencols; // return cursorPos to within screen range
+                    }
                 }
                 else if (cursorPos.y > 1 && fromOpenedFile) { // move up to the end of the previous line
                     cursorPos.y--;
                     if (cursorPos.y > screenrows)
                         cursorPos.y = screenrows-1; // return cursorPos to within screen range
                     cursorPos.x = toRenderToScreen[cursorPos.y + rowOffset -1].size + 1;
-                  }
+                    // Consider tabs
+                    struct outputBuffer* line = &fromOpenedFile[cursorPos.y + rowOffset - 1];
+                    cursorPos.x = addTabs(line, cursorPos.x );
+                }
                 break;
               case 'H':{ // Home
                     cursorPos.x = 1;
@@ -305,6 +316,10 @@ char readCharacter(){
 
             }
         }
+        // Consider tabs
+        struct outputBuffer* line = &fromOpenedFile[cursorPos.y + rowOffset - 1];
+        cursorPos.x = addTabs(line, cursorPos.x );
+        
         // Snap to end of line
         if (cursorPos.y > 0 && cursorPos.y <= screenrows +1 && fromOpenedFile) {
           int currentRowEnd = toRenderToScreen[cursorPos.y + rowOffset -1].size + 1;
@@ -556,9 +571,9 @@ int addTabs(struct outputBuffer* line, int xPos){
     int index = zeroTabs(line, &xPos);
     return index;
 }
-int subtractTabs(struct outputBuffer* line, int* xPos){
+int subtractTabs(struct outputBuffer* line, int xPos){
     int index = zeroTabs(line, &xPos);
-    return *xPos;
+    return xPos;
 }
 
 void openFile(char* file) {
@@ -726,6 +741,9 @@ void deleteChar(){
         return;
     }
     else {
+        // Consider tabs
+        cursorPos.x = subtractTabs(&fromOpenedFile[cursorPos.y + rowOffset - 1], cursorPos.x );
+        
         int yPos = cursorPos.y + rowOffset - 1;
         int xPos = cursorPos.x + colOffset - 1;
         if (xPos > 0){
@@ -739,6 +757,7 @@ void deleteChar(){
             appendString(fromOpenedFile, yPos - 1, fromOpenedFile[yPos].buf, fromOpenedFile[yPos].size);
             deleteRow(yPos);
         }
+        cursorPos.x = addTabs(&fromOpenedFile[cursorPos.y + rowOffset - 1], cursorPos.x );
     }
 }
 

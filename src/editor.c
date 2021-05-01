@@ -316,9 +316,6 @@ char readCharacter(){
 
             }
         }
-        // Consider tabs
-        struct outputBuffer* line = &fromOpenedFile[cursorPos.y + rowOffset - 1];
-        cursorPos.x = addTabs(line, cursorPos.x );
         
         // Snap to end of line
         if (cursorPos.y > 0 && cursorPos.y <= screenrows +1 && fromOpenedFile) {
@@ -536,6 +533,10 @@ void scroll() {
     }
     if (cursorPos.y > screenrows)
         cursorPos.y = screenrows; // return cursorPos to within screen range
+    
+    // Consider tabs
+    struct outputBuffer* line = &fromOpenedFile[cursorPos.y + rowOffset - 1];
+    cursorPos.x = addTabs(line, cursorPos.x );
     
     // HORIZONTAL SCROLLING
     if (cursorPos.x < colOffset && cursorPos.x == 0) {

@@ -201,6 +201,7 @@ char readCharacter(){
             switch (seq[1]) {
                 case 'H':// Home key
                     cursorPos.x = 0;
+                    colOffset = 0;
                     repositionCursor();
                     break;
                 case 'F': // End
@@ -245,14 +246,17 @@ char readCharacter(){
                     }
                     // Consider tabs
                     struct outputBuffer* line = &fromOpenedFile[cursorPos.y + rowOffset - 1];
-                    cursorPos.x = addTabs(line, cursorPos.x );
+                    cursorPos.x = addTabs(line, cursorPos.x + colOffset );
                     
                     // Snap to end of line
-                    if (cursorPos.y < screenrows && fromOpenedFile) {
+                    if (cursorPos.y < screenrows + 1 && fromOpenedFile) {
                       int currentRowEnd = toRenderToScreen[cursorPos.y - 1 + rowOffset].size + 1;
-                      if (cursorPos.x > currentRowEnd)
-                          cursorPos.x = currentRowEnd;
+                      if (cursorPos.x + colOffset > currentRowEnd){
+                          cursorPos.x = currentRowEnd ;
+                          colOffset = 0;
+                        }
                     }
+                    
                     refresh();
                     return readCharacter();
                 }
@@ -272,11 +276,14 @@ char readCharacter(){
               case 'C': // Arrow right
                 if (cursorPos.y <= screenrows
                     && fromOpenedFile){
-                    if (cursorPos.x <= toRenderToScreen[cursorPos.y + rowOffset - 1].size){
-                        cursorPos.x++;
+                    if (cursorPos.x + colOffset < toRenderToScreen[cursorPos.y + rowOffset - 1].size + 1){
+                        if (cursorPos.x < screencols)
+                            cursorPos.x++;
+                        else
+                            colOffset++;
                     }
                     else if (cursorPos.y < screenrows &&
-                    cursorPos.x == toRenderToScreen[cursorPos.y + rowOffset -1].size + 1){
+                    cursorPos.x + colOffset >= toRenderToScreen[cursorPos.y + rowOffset -1].size + 1){
                         cursorPos.y++;
                         cursorPos.x = 1;
                         colOffset = 0;
@@ -289,11 +296,10 @@ char readCharacter(){
                     // Consider tabs
                     struct outputBuffer* line = &fromOpenedFile[cursorPos.y + rowOffset - 1];
                     cursorPos.x = subtractTabs(line, cursorPos.x);
-                    cursorPos.x = addTabs(line, cursorPos.x - 1);
-                    
-                    if (cursorPos.x >= screencols){
-                        cursorPos.x = screencols; // return cursorPos to within screen range
-                    }
+                    cursorPos.x--;
+                    cursorPos.x = addTabs(line, cursorPos.x);
+                    if (cursorPos.x >= screencols)
+                        cursorPos.x = screencols - 1; // return cursorPos to within screen range
                 }
                 else if (cursorPos.y > 1 && fromOpenedFile) { // move up to the end of the previous line
                     cursorPos.y--;
@@ -302,11 +308,14 @@ char readCharacter(){
                     cursorPos.x = toRenderToScreen[cursorPos.y + rowOffset -1].size + 1;
                     // Consider tabs
                     struct outputBuffer* line = &fromOpenedFile[cursorPos.y + rowOffset - 1];
-                    cursorPos.x = addTabs(line, cursorPos.x );
+                    cursorPos.x = addTabs(line, cursorPos.x);
                 }
+                else if (colOffset > 0)
+                    colOffset--;
                 break;
               case 'H':{ // Home
                     cursorPos.x = 1;
+                    colOffset = 0;
                 }
                 break;
               case 'F': // End
@@ -319,9 +328,11 @@ char readCharacter(){
         
         // Snap to end of line
         if (cursorPos.y > 0 && cursorPos.y <= screenrows +1 && fromOpenedFile) {
-          int currentRowEnd = toRenderToScreen[cursorPos.y + rowOffset -1].size + 1;
-          if (cursorPos.x > currentRowEnd)
-              cursorPos.x = currentRowEnd;
+          int currentRowEnd = toRenderToScreen[cursorPos.y + rowOffset -1].size  + 1;
+            if (cursorPos.x + colOffset > currentRowEnd){
+              cursorPos.x = currentRowEnd ;
+              colOffset = 0;
+            }
         }
         refresh();
         return readCharacter();
@@ -390,7 +401,6 @@ void processKey(){
             insertChar(c);
             break;
     };
-    printf("%d\r\n", c);
     quit_conf = 1;
 }
 
@@ -534,17 +544,18 @@ void scroll() {
     if (cursorPos.y > screenrows)
         cursorPos.y = screenrows; // return cursorPos to within screen range
     
-    // Consider tabs
-    struct outputBuffer* line = &fromOpenedFile[cursorPos.y + rowOffset - 1];
-    cursorPos.x = addTabs(line, cursorPos.x );
     
     // HORIZONTAL SCROLLING
     if (cursorPos.x < colOffset && cursorPos.x == 0) {
         --colOffset;
      }
-     if (cursorPos.x >= colOffset + screencols) {
-       colOffset = cursorPos.x - screencols + 1;
+     if (cursorPos.x > colOffset + screencols) {
+         colOffset = cursorPos.x - screencols;
      }
+    
+    // Consider tabs
+    struct outputBuffer* line = &fromOpenedFile[cursorPos.y + rowOffset - 1];
+    cursorPos.x = addTabs(line, cursorPos.x);
     repositionCursor();
 }
 
@@ -688,7 +699,7 @@ void insertIntoBuffer(struct outputBuffer* dest, int pos, int c){
 
 void insertChar(int character) {
     int yPos = cursorPos.y + rowOffset - 1;
-    int xPos = cursorPos.x + colOffset - 1;
+    int xPos = subtractTabs(&fromOpenedFile[yPos],cursorPos.x + colOffset -1) ;
     
     if (!fromOpenedFile){
         // Currently on the line after the title
@@ -699,7 +710,7 @@ void insertChar(int character) {
         yPos = 0;
         insertNewLine(openedFileLines, "", 0);
     }
-    else if ( yPos == openedFileLines) { // buffer too small
+    else if ( yPos == openedFileLines) {
         insertNewLine(openedFileLines, "", 0);
     }
     insertIntoBuffer(&fromOpenedFile[yPos], xPos, character);
@@ -710,7 +721,8 @@ void insertChar(int character) {
 void insertLine(){
     // when pressing enter
     int yPos = cursorPos.y + rowOffset - 1;
-    int xPos = cursorPos.x + colOffset - 1;
+    int xPos = subtractTabs(&fromOpenedFile[yPos],cursorPos.x + colOffset) - 1;
+    
     if (xPos == 0){ // Add an empty line
         insertNewLine(yPos, "", 0);
     }
@@ -743,7 +755,7 @@ void deleteChar(){
     }
     else {
         // Consider tabs
-        cursorPos.x = subtractTabs(&fromOpenedFile[cursorPos.y + rowOffset - 1], cursorPos.x );
+        cursorPos.x = subtractTabs(&fromOpenedFile[cursorPos.y + rowOffset - 1], cursorPos.x + colOffset );
         
         int yPos = cursorPos.y + rowOffset - 1;
         int xPos = cursorPos.x + colOffset - 1;
@@ -836,6 +848,7 @@ void search(){
         if (match){
             cursorPos.y = i+1;
             cursorPos.x = match - line->buf +1;
+            
             if (cursorPos.y > screenrows)
                 rowOffset = cursorPos.y - screenrows -1;
             else

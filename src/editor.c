@@ -482,7 +482,7 @@ void loadStatusMessage(const char *fmt, ...){
     statusmsg_time = time(NULL);
 }
 
-char* userPrompt(char* message){
+char* userPrompt(char* message, void (*func)(char* str, int key)){
     size_t inputSize = 128;
     char* input = malloc(inputSize);
     input[0] = '\0';
@@ -496,6 +496,8 @@ char* userPrompt(char* message){
         int charIn = readCharacter();
         if (charIn == '\x1b'){  // Escape key
             loadStatusMessage("");
+            if (func)
+                func(input, charIn);
             free(input);
             return NULL;
         }
@@ -509,6 +511,8 @@ char* userPrompt(char* message){
             // exit prompt
             if (len != 0) {
                 loadStatusMessage("");
+                if (func)
+                    func(input, charIn);
                 return input;
             }
         }
@@ -520,6 +524,9 @@ char* userPrompt(char* message){
             input[len++] = charIn;
             input[len] = '\0';
         }
+        
+        if (func)
+            func(input, charIn);
     }
 }
 
@@ -807,7 +814,7 @@ char* prepareToString(int *bufferLength){
 
 void saveFile(){
     if (filename == NULL){
-        filename = userPrompt("Save as : %s");
+        filename = userPrompt("Save as : %s", NULL);
         // Status bar uses formated strings
         if (filename == NULL){
             loadStatusMessage("Save aborted.");
@@ -838,13 +845,19 @@ void saveFile(){
 }
 
 void search(){
-    char* query = userPrompt("Search: %s (ESC to cancel)");
+    char* query = userPrompt("Search: %s (ESC to cancel)", onSearch);
     if (query == NULL)
+        return;
+    
+    free(query);
+}
+void onSearch (char *string, int key){
+    if (key == '\r' || key == '\x1b') // Enter and Esc
         return;
     
     for (int i = 0; i < openedFileLines; i++){
         struct outputBuffer* line = &toRenderToScreen[i];
-        char* match = strstr(line->buf, query);
+        char* match = strstr(line->buf, string);
         if (match){
             cursorPos.y = i+1;
             cursorPos.x = match - line->buf +1;
@@ -857,5 +870,4 @@ void search(){
             break;
         }
     }
-    free(query);
 }

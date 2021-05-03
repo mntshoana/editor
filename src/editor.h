@@ -93,7 +93,7 @@ void loadRows(struct outputBuffer* oBuf, int delta);
 void loadStatusBar(struct outputBuffer* oBuf);
 void loadStatusMessage(const char *fmt, ...);
 
-char* userPrompt(char* message);
+char* userPrompt(char* message, void (*func)(char* str, int key));
 
 
 void scroll();
@@ -120,4 +120,5 @@ char* prepareToString(int *bufferLength);
 void saveFile();
 
 void search();
+void onSearch (char *string, int key);
 #endif // EDITOR_H

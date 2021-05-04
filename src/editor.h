@@ -66,6 +66,8 @@ struct outputBuffer* fromOpenedFile, * toRenderToScreen;
 char *filename;
 
 int fileModified;
+int awaitingArrow;
+int lastArrow;
 
 char statusmsg[80];
 time_t statusmsg_time;
@@ -118,6 +120,7 @@ void deleteRow(int at);
 
 char* prepareToString(int *bufferLength);
 void saveFile();
+
 
 void search();
 void onSearch (char *string, int key);

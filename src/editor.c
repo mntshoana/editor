@@ -56,7 +56,7 @@ void reset(){
 }
 
 void refresh(){
-    struct outputBuffer oBuf = {NULL, 0};
+    struct outputBuffer oBuf = {NULL, 0, NULL};
     appendToBuffer(&oBuf, HIDE_CURSOR);
     appendToBuffer(&oBuf, CL_SCREEN_ALL);
     appendToBuffer(&oBuf, REPOS_CURSOR_TOP_LEFT);
@@ -106,7 +106,7 @@ int getWindowSize(int *rows, int *cols) {
     int res = ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
     if (res == -1 || ws.ws_col == 0){
         // ioctl failed, try alternative method to get height and width
-        struct outputBuffer oBuf = {NULL, 0};
+        struct outputBuffer oBuf = {NULL, 0, NULL};
         appendToBuffer(&oBuf, REPOS_CURSOR_BOTTOM_RIGHT);
         appendToBuffer(&oBuf, QUERRY_CURSOR_POS);
         terminalOut(oBuf.buf, oBuf.size);
@@ -160,6 +160,20 @@ void appendToBuffer(struct outputBuffer* out, const char* str, int len) {
     out->buf = ptr;
     out->size += len;
     
+}
+
+void appendWithColor(struct outputBuffer* oBuf, const char* str, int len, int value){
+    switch (value){
+        case highlight_num:
+            appendToBuffer(oBuf, CL_RED_COLOR);
+            appendToBuffer(oBuf, str, len);
+            break;
+        case normal:
+        default:
+            appendToBuffer(oBuf, CL_DEFAULT_COLOR);
+            appendToBuffer(oBuf, str, len);
+            break;
+    }
 }
 
 // Helper function to conver cursor positions to terminal sequence string
@@ -363,7 +377,7 @@ char readCharacter(){
 }
 
 void repositionCursor(){
-    struct outputBuffer oBuf = {NULL, 0};
+    struct outputBuffer oBuf = {NULL, 0, NULL};
     appendToBuffer(&oBuf, HIDE_CURSOR);
     appendreposCursorSequence(&oBuf, cursorPos.x, cursorPos.y);
     appendToBuffer(&oBuf, SHOW_CURSOR);
@@ -390,9 +404,11 @@ void processKey(){
             for (int i = 0; i < openedFileLines; i++ ){
                 free(fromOpenedFile[i].buf);
                 free(toRenderToScreen[i].buf);
+                free(toRenderToScreen[i].state);
             }
             free(fromOpenedFile);
             free(toRenderToScreen);
+            
             free(filename);
             exit(0);
             break;
@@ -451,8 +467,17 @@ void loadRows(struct outputBuffer* oBuf, int delta){
             int len = (fromOpenedFile[pos].size  - colOffset > screencols)
                         ? (screencols)  :  (fromOpenedFile[pos].size - colOffset);
             
-            if (len > 0)
-                appendToBuffer(oBuf, fromOpenedFile[pos].buf + colOffset, len);
+            if (len > 0){
+                //appendToBuffer(oBuf, fromOpenedFile[pos].buf + colOffset, len);
+                
+                // Highlight Text
+                char *c = fromOpenedFile[pos].buf + colOffset;
+                unsigned char* status = &toRenderToScreen[pos].state[colOffset];
+                for (int i = 0; i < len; i++)
+                    appendWithColor(oBuf, &c[i], 1, status[i]);
+                // Reset to default after printing line
+                appendToBuffer(oBuf, CL_DEFAULT_COLOR);
+            }
 
             appendToBuffer(oBuf, "\r\n", 2);
              
@@ -671,6 +696,20 @@ void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src){
         }
         dest->buf[idx] = '\0';
         dest->size = idx;
+        
+    }
+    updateStatus(dest);
+}
+
+void updateStatus(struct outputBuffer* line){
+    line->state = realloc(line->state, line->size);
+    memset(line->state,  normal, line->size);
+    for (int i = 0; i < line->size; i++){
+        if (isdigit(line->buf[i])){
+            line->state[i] = highlight_num;
+        }
+        else
+            line->state[i] = normal;
     }
 }
 
@@ -690,6 +729,7 @@ void insertNewLine(int at, char* stringLine, int readCount){
     
     fromOpenedFile[at].size = readCount;
     fromOpenedFile[at].buf = malloc(readCount + 1);
+    fromOpenedFile[at].state = NULL; // leave blank
     memcpy(fromOpenedFile[at].buf, stringLine, readCount);
     fromOpenedFile[at].buf[readCount] = '\0';
     
@@ -697,6 +737,7 @@ void insertNewLine(int at, char* stringLine, int readCount){
     toRenderToScreen = realloc(toRenderToScreen, sizeof(struct outputBuffer) * (openedFileLines + 1));
     toRenderToScreen[at].size = 0;
     toRenderToScreen[at].buf = NULL;
+    toRenderToScreen[at].state = NULL;
     updateBuffer(&toRenderToScreen[at], &fromOpenedFile[at]);
     
     openedFileLines += 1;
@@ -813,6 +854,7 @@ void deleteRow(int at){
     
     free(fromOpenedFile[at].buf);
     free(toRenderToScreen[at].buf);
+    free (toRenderToScreen[at].state);
     
     memmove(&fromOpenedFile[at], &fromOpenedFile[at + 1], sizeof(struct outputBuffer) * (openedFileLines - at -1) );
     memmove(&toRenderToScreen[at], &toRenderToScreen[at + 1], sizeof(struct outputBuffer) * (openedFileLines - at -1) );
@@ -925,3 +967,4 @@ void onSearch (char *string, int key){
         }
     }
 }
+

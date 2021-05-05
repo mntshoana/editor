@@ -32,6 +32,30 @@
 #define CL_LINE_LEFT_OF_CURSOR "\x1b[1K", 4
 #define CL_LINE_ALL            "\x1b[2K", 4
 
+#define CL_BLACK_COLOR "\x1b[30m", 5
+#define CL_RED_COLOR "\x1b[31m", 5
+#define CL_BLACK_COLOR "\x1b[30m", 5
+#define CL_BLACK_COLOR "\x1b[30m", 5
+
+#define CL_BLACK_COLOR "\x1b[30m", 5
+#define CL_RED_COLOR "\x1b[31m", 5
+#define CL_GREEN_COLOR "\x1b[32m", 5
+#define CL_YELLO_COLOR "\x1b[33m", 5
+#define CL_BLUE_COLOR "\x1b[34m", 5
+#define CL_MAGENTA_COLOR "\x1b[35m", 5
+#define CL_CYAN_COLOR "\x1b[36m", 5
+#define CL_WHITE_COLOR "\x1b[37m", 5
+#define CL_DEFAULT_COLOR "\x1b[39m", 5
+
+#define CL_BGblack_COLOR "\x1b[40m", 5
+#define CL_BGred_COLOR "\x1b[41m", 5
+#define CL_BGgreen_COLOR "\x1b[42m", 5
+#define CL_BGyellow_COLOR "\x1b[43m", 5
+#define CL_BGblue_COLOR "\x1b[44m", 5
+#define CL_BGmagenta_COLOR "\x1b[45m", 5
+#define CL_BGcyan_COLOR "\x1b[46m", 5
+#define CL_BGwhite_COLOR "\x1b[47m", 5
+
 #define CL_INVERT_COLOR "\x1b[7m", 4
 #define CL_FMT_BOLD "\x1b[1m", 4
 #define CL_FMT_UNDERSCORE "\x1b[4m", 4
@@ -56,9 +80,16 @@ int screencols;
 int rowOffset; // to update pos as user scrolls up or down
 int colOffset; // to update pos as user scrolls left or right
 
+
 struct outputBuffer {
-  char *buf;
-  int size;
+    char *buf;
+    int size;
+    unsigned char *state;
+};
+
+enum text_state {
+    normal = 0,
+    highlight_num
 };
 
 int openedFileLines;
@@ -83,6 +114,7 @@ void editorInit();
 int getWindowSize(int *rows, int *cols);
 
 void appendToBuffer(struct outputBuffer* out, const char* str, int len);
+void appendWithColor(struct outputBuffer* source, const char* str, int len, int value);
 void appendreposCursorSequence(struct outputBuffer* out, int x, int y);
 int terminalOut(const char *sequence, int count);
 
@@ -107,6 +139,7 @@ void openFile(char* file);
 
 
 void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src);
+void updateStatus(struct outputBuffer* line);
 
 void insertNewLine(int at, char* stringLine, int readCount);
 void appendString(struct outputBuffer* source, int line, char* string, size_t len);
@@ -124,4 +157,5 @@ void saveFile();
 
 void search();
 void onSearch (char *string, int key);
+
 #endif // EDITOR_H

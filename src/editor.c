@@ -164,6 +164,10 @@ void appendToBuffer(struct outputBuffer* out, const char* str, int len) {
 
 void appendWithColor(struct outputBuffer* oBuf, const char* str, int len, int value){
     switch (value){
+        case highlight_match:
+            appendToBuffer(oBuf, CL_BLUE_COLOR);
+            appendToBuffer(oBuf, str, len);
+            break;
         case highlight_num:
             appendToBuffer(oBuf, CL_RED_COLOR);
             appendToBuffer(oBuf, str, len);
@@ -475,7 +479,7 @@ void loadRows(struct outputBuffer* oBuf, int delta){
                 unsigned char* status = &toRenderToScreen[pos].state[colOffset];
                 for (int i = 0; i < len; i++)
                     appendWithColor(oBuf, &c[i], 1, status[i]);
-                // Reset to default after printing line
+                // Reset colors to default at the end of printing the line (row) in the buffer
                 appendToBuffer(oBuf, CL_DEFAULT_COLOR);
             }
 
@@ -922,10 +926,12 @@ void search(){
 }
 void onSearch (char *string, int key){
     static int last = -1;
+    static int next = 0;
     static int direction = 1; // positive or forward search
     
     if ( key == '\x1b') {// Enter and Esc
         last = -1; // reset
+        next = 0;
         direction =1;
         return;
     }
@@ -936,9 +942,11 @@ void onSearch (char *string, int key){
     else if ( lastArrow == 1 || lastArrow == 3 ){
         direction = -1;
         lastArrow = 0;
+        next = 0;
     }
     else {
         last = -1;
+        next = 0;
         direction = 1;
     }
     
@@ -947,24 +955,36 @@ void onSearch (char *string, int key){
     int current = last;
     
     for (int i = 0; i < openedFileLines; i++){
-        current += direction;
+        if (next != 0  )
+            next += direction;
+        else
+            current += direction;
+        
         if (current == -1)
             current = openedFileLines -1;
         else if (current == openedFileLines)
             current = 0;
         
+        
         struct outputBuffer* line = &toRenderToScreen[current];
-        char* match = strstr(line->buf, string);
+        char* match = strstr(line->buf + next, string);
+    
         if (match){
             last = current;
+            next = match - line->buf;
             
             cursorPos.y = current+1;
-            cursorPos.x = addTabs(line, match - line->buf +1);
+            cursorPos.x = match - line->buf +1;
+            
             
             rowOffset = 0;
 
+            // Highilight the found text
+            memset(&line->state[match - line->buf ], highlight_match, strlen(string));
             break;
         }
+        else
+            next = 0;
     }
 }
 

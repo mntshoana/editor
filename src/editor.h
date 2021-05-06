@@ -34,11 +34,6 @@
 
 #define CL_BLACK_COLOR "\x1b[30m", 5
 #define CL_RED_COLOR "\x1b[31m", 5
-#define CL_BLACK_COLOR "\x1b[30m", 5
-#define CL_BLACK_COLOR "\x1b[30m", 5
-
-#define CL_BLACK_COLOR "\x1b[30m", 5
-#define CL_RED_COLOR "\x1b[31m", 5
 #define CL_GREEN_COLOR "\x1b[32m", 5
 #define CL_YELLO_COLOR "\x1b[33m", 5
 #define CL_BLUE_COLOR "\x1b[34m", 5
@@ -89,7 +84,8 @@ struct outputBuffer {
 
 enum text_state {
     normal = 0,
-    highlight_num
+    highlight_num,
+    highlight_match
 };
 
 int openedFileLines;

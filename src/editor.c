@@ -929,6 +929,16 @@ void onSearch (char *string, int key){
     static int next = 0;
     static int direction = 1; // positive or forward search
     
+    static int saved_line_nr;
+    static char* saved_line = NULL;
+    
+    // Restore state of previously highlighted text
+    if (saved_line){
+        memcpy(toRenderToScreen[saved_line_nr].state, saved_line, toRenderToScreen[saved_line_nr].size);
+        free(saved_line);
+        saved_line = NULL;
+    }
+    
     if ( key == '\x1b') {// Enter and Esc
         last = -1; // reset
         next = 0;
@@ -978,8 +988,12 @@ void onSearch (char *string, int key){
             
             
             rowOffset = 0;
+            // Save state of buffer for later restoration
+            saved_line_nr = current;
+            saved_line = malloc(line->size);
+            memcpy(saved_line, line->state, line->size);
 
-            // Highilight the found text
+            // change state to Highilight the found text
             memset(&line->state[match - line->buf ], highlight_match, strlen(string));
             break;
         }

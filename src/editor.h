@@ -66,6 +66,20 @@
 // end of V100 escape sequences
 
 #define TAB_SPACES 8
+
+enum text_state {
+    normal = 0,
+    highlight_num = 1,
+    highlight_match
+};
+
+
+struct editorFlags {
+    char* filetype;
+    char** recognisedFileList;
+    int flags;
+};
+
 struct pos {
     int x, y;
 }cursorPos; // x, y elements begin from 1:n (not zero based)
@@ -82,14 +96,9 @@ struct outputBuffer {
     unsigned char *state;
 };
 
-enum text_state {
-    normal = 0,
-    highlight_num,
-    highlight_match
-};
-
 int openedFileLines;
 struct outputBuffer* fromOpenedFile, * toRenderToScreen;
+struct editorFlags* openedFileFlags;
 char *filename;
 
 int fileModified;

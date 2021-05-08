@@ -1,5 +1,10 @@
 #include "editor.h"
 
+char * c_fam[] = {".c", ".h", ".cpp", NULL};
+struct editorFlags database[] = {
+        { "C",   c_fam,   1 }, // C Family file type
+};
+
 // Prints an error message and exits the program
 void failExit(const char *s) {
     perror(s);
@@ -95,6 +100,9 @@ void editorInit() {
     
     statusmsg[0] = '\0';
     statusmsg_time = 0;
+    
+    //openedFileFlags = &database[0];
+    openedFileFlags = NULL;
 }
 
 /*
@@ -504,7 +512,7 @@ void loadStatusBar(struct outputBuffer* oBuf){
                          filename
                          ? filename : "[Unsaved File]", openedFileLines, modifiedStatus );
     int rwidth = snprintf(rstatus, sizeof(rstatus),
-                          "%d/%d",
+                          "%s | %d/%d", (openedFileFlags) ? openedFileFlags->filetype : "(unknown filetype)",
                           cursorPos.y + rowOffset, openedFileLines);
     if (width > screencols)
         width = screencols;
@@ -708,13 +716,18 @@ void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src){
 void updateStatus(struct outputBuffer* line){
     line->state = realloc(line->state, line->size);
     memset(line->state,  normal, line->size);
-    for (int i = 0; i < line->size; i++){
-        if (isdigit(line->buf[i])){
-            line->state[i] = highlight_num;
-        }
-        else
-            line->state[i] = normal;
+    
+    if (openedFileFlags == NULL)
+        return;
+    
+    if (openedFileFlags->flags & highlight_num){
+        for (int i = 0; i < line->size; i++)
+            if (isdigit(line->buf[i]))
+                line->state[i] = highlight_num;
     }
+                
+        
+    
 }
 
 // Adds a string to the end of the output buffer and the render buffer

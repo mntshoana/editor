@@ -42,14 +42,14 @@
 #define CL_WHITE_COLOR "\x1b[37m", 5
 #define CL_DEFAULT_COLOR "\x1b[39m", 5
 
-#define CL_BGblack_COLOR "\x1b[40m", 5
-#define CL_BGred_COLOR "\x1b[41m", 5
-#define CL_BGgreen_COLOR "\x1b[42m", 5
-#define CL_BGyellow_COLOR "\x1b[43m", 5
-#define CL_BGblue_COLOR "\x1b[44m", 5
-#define CL_BGmagenta_COLOR "\x1b[45m", 5
-#define CL_BGcyan_COLOR "\x1b[46m", 5
-#define CL_BGwhite_COLOR "\x1b[47m", 5
+#define CL_BG_BLACK_COLOR "\x1b[40m", 5
+#define CL_BG_RED_COLOR "\x1b[41m", 5
+#define CL_BG_GREEN_COLOR "\x1b[42m", 5
+#define CL_BG_YELLOW_COLOR "\x1b[43m", 5
+#define CL_BG_BLUE_COLOR "\x1b[44m", 5
+#define CL_BG_MAGENTA_COLOR "\x1b[45m", 5
+#define CL_BG_CYAN_COLOR "\x1b[46m", 5
+#define CL_BG_WHITE_COLOR "\x1b[47m", 5
 
 #define CL_INVERT_COLOR "\x1b[7m", 4
 #define CL_FMT_BOLD "\x1b[1m", 4
@@ -141,7 +141,7 @@ int addTabs(struct outputBuffer* line, int xPos);
 int subtractTabs(struct outputBuffer* line, int xPos);
 
 void openFile(char* file);
-
+void detectFileType();
 
 void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src);
 void updateStatus(struct outputBuffer* line);

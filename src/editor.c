@@ -1,9 +1,13 @@
 #include "editor.h"
 
+// internal types to recognize
 char * c_fam[] = {".c", ".h", ".cpp", NULL};
+char * text[] = {".txt", ".inf", NULL};
 struct editorFlags database[] = {
-        { "C",   c_fam,   1 }, // C Family file type
+        { "C",           c_fam,      highlight_num }, // C Family file type
+        { "Text file",   text,       normal }, // Text file
 };
+int databaseSize = sizeof(database) / sizeof(database[0]);
 
 // Prints an error message and exits the program
 void failExit(const char *s) {
@@ -96,13 +100,13 @@ void editorInit() {
     toRenderToScreen = NULL;
     
     filename = NULL;
+    openedFileFlags = NULL;
+    
     fileModified = 0;
     
     statusmsg[0] = '\0';
     statusmsg_time = 0;
     
-    //openedFileFlags = &database[0];
-    openedFileFlags = NULL;
 }
 
 /*
@@ -662,6 +666,8 @@ void openFile(char* file) {
     FILE* f = fopen(file, "r");
     if (!f)
         failExit("Could not open file");
+    else
+        detectFileType();
     char *line = NULL;
     size_t size = 0;
     int readCount;
@@ -677,6 +683,26 @@ void openFile(char* file) {
     fileModified = 0;
     lastArrow = 0;
     awaitingArrow = 0;
+}
+
+void detectFileType(){
+    openedFileFlags = NULL;
+    if (filename == NULL)
+        return;
+    
+    char* ext = strrchr(filename, '.');
+    
+    for (int i = 0; i < databaseSize; i++){
+        struct editorFlags* flags = &database[i];
+        
+        for (int j = 0; flags->recognisedFileList[j]; j++){
+            int res = (flags->recognisedFileList[j][0] == '.');
+            if ( (res && ext && !strcmp(ext, flags->recognisedFileList[j]) ) || (!res && strstr(filename, flags->recognisedFileList[i] )) ){
+                openedFileFlags = flags;
+                return;
+            }
+        }
+    }
 }
 
 void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src){
@@ -905,7 +931,7 @@ void saveFile(){
             loadStatusMessage("Save aborted.");
             return;
         }
-            
+        detectFileType();
     }
     
     int len;

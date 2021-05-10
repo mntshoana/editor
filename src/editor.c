@@ -4,7 +4,7 @@
 char * c_fam[] = {".c", ".h", ".cpp", NULL};
 char * text[] = {".txt", ".inf", NULL};
 struct editorFlags database[] = {
-        { "C",           c_fam,      highlight_num }, // C Family file type
+        { "C",           c_fam,      highlight_num | highlight_string }, // C Family file type
         { "Text file",   text,       normal }, // Text file
 };
 int databaseSize = sizeof(database) / sizeof(database[0]);
@@ -182,6 +182,10 @@ void appendWithColor(struct outputBuffer* oBuf, const char* str, int len, int va
             break;
         case highlight_num:
             appendToBuffer(oBuf, CL_RED_COLOR);
+            appendToBuffer(oBuf, str, len);
+            break;
+        case highlight_string:
+            appendToBuffer(oBuf, CL_MAGENTA_COLOR);
             appendToBuffer(oBuf, str, len);
             break;
         case normal:
@@ -746,14 +750,40 @@ void updateStatus(struct outputBuffer* line){
     if (openedFileFlags == NULL)
         return;
     
-    if (openedFileFlags->flags & highlight_num){
-        for (int i = 0; i < line->size; i++)
+    int i = 0;
+    int isQuote = 0;
+    
+    while ( i < line->size){
+        
+        if (openedFileFlags->flags & highlight_string){
+            char c = line->buf[i];
+            if (isQuote){
+                line->state[i] = highlight_string;
+                if (c == '\\' && i + 1 < line->size) {
+                    line->state[i + 1] = highlight_string;
+                    i += 2;
+                    continue;
+                }
+                if (c == isQuote)
+                    isQuote = 0;
+                i++;
+                continue;
+            }
+            else if (c == '"' || c == '\''){
+                isQuote = c;
+                line->state[i] = highlight_string;
+                i++;
+                continue;
+            }
+            
+        }
+        
+        if (openedFileFlags->flags & highlight_num)
             if (isdigit(line->buf[i]))
                 line->state[i] = highlight_num;
-    }
-                
         
-    
+        i++;
+    }
 }
 
 // Adds a string to the end of the output buffer and the render buffer

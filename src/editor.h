@@ -70,7 +70,8 @@
 enum text_state {
     normal = 0,
     highlight_num = 1,
-    highlight_match
+    highlight_string = (1 << 1),
+    highlight_match = (1 << 2)
 };
 
 

@@ -4,7 +4,7 @@
 char * c_fam[] = {".c", ".h", ".cpp", NULL};
 char * text[] = {".txt", ".inf", NULL};
 struct editorFlags database[] = {
-        { "C",           c_fam,      highlight_num | highlight_string }, // C Family file type
+        { "C",           c_fam,      highlight_num | highlight_string | highlight_comment }, // C Family
         { "Text file",   text,       normal }, // Text file
 };
 int databaseSize = sizeof(database) / sizeof(database[0]);
@@ -178,6 +178,10 @@ void appendWithColor(struct outputBuffer* oBuf, const char* str, int len, int va
     switch (value){
         case highlight_match:
             appendToBuffer(oBuf, CL_BLUE_COLOR);
+            appendToBuffer(oBuf, str, len);
+            break;
+        case highlight_comment:
+            appendToBuffer(oBuf, CL_CYAN_COLOR);
             appendToBuffer(oBuf, str, len);
             break;
         case highlight_num:
@@ -751,10 +755,17 @@ void updateStatus(struct outputBuffer* line){
         return;
     
     int i = 0;
-    int isQuote = 0;
-    
+    static int isQuote = 0;
+    if (&toRenderToScreen[0] == line)
+        isQuote = 0;
     while ( i < line->size){
         
+        if (openedFileFlags->flags & highlight_comment){
+            if (!isQuote && !strncmp (&line->buf[i], "//", 2)){
+                memset(&line->state[i], highlight_comment, line->size - 1);
+                break;
+            }
+        }
         if (openedFileFlags->flags & highlight_string){
             char c = line->buf[i];
             if (isQuote){
@@ -846,7 +857,7 @@ void insertIntoBuffer(struct outputBuffer* dest, int pos, int c){
 
 void insertChar(int character) {
     int yPos = cursorPos.y + rowOffset - 1;
-    int xPos = subtractTabs(&fromOpenedFile[yPos],cursorPos.x + colOffset -1) ;
+    int xPos = subtractTabs(&fromOpenedFile[yPos],cursorPos.x + colOffset) -1 ;
     
     if (!fromOpenedFile){
         // Currently on the line after the title
@@ -863,6 +874,8 @@ void insertChar(int character) {
     insertIntoBuffer(&fromOpenedFile[yPos], xPos, character);
     updateBuffer(&toRenderToScreen[yPos], &fromOpenedFile[yPos]);
     cursorPos.x++;
+    for(int i = 0; i < openedFileLines; i++)
+        updateStatus(&toRenderToScreen[i]);
 }
 
 void insertLine(){
@@ -919,6 +932,8 @@ void deleteChar(){
         }
         cursorPos.x = addTabs(&fromOpenedFile[cursorPos.y + rowOffset - 1], cursorPos.x );
     }
+    for(int i = 0; i < openedFileLines; i++)
+        updateStatus(&toRenderToScreen[i]);
 }
 
 void deleteRow(int at){

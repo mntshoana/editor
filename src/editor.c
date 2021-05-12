@@ -2,10 +2,24 @@
 
 // internal types to recognize
 char * c_fam[] = {".c", ".h", ".cpp", NULL};
+char * c_keyw[] = {"switch", "if", "while", "do", "for", "break", "continue", "return", "else", "enum", "struct", "union", "typedef", "static", "class", "case", "int|", "long|", "double|", "float|", "char|", "unsigned|", "signed|",
+    "void|", NULL};
+
 char * text[] = {".txt", ".inf", NULL};
 struct editorFlags database[] = {
-        { "C",           c_fam,      highlight_num | highlight_string | highlight_comment }, // C Family
-        { "Text file",   text,       normal }, // Text file
+        {
+            "C",
+            c_fam,
+            c_keyw,
+            highlight_num | highlight_string | highlight_comment
+            | highlight_keyword_strong | highlight_keyword_regular
+        }, // C Family
+        {
+            "Text file",
+            text,
+            NULL,
+            normal
+        }, // Text file
 };
 int databaseSize = sizeof(database) / sizeof(database[0]);
 
@@ -181,15 +195,23 @@ void appendWithColor(struct outputBuffer* oBuf, const char* str, int len, int va
             appendToBuffer(oBuf, str, len);
             break;
         case highlight_comment:
-            appendToBuffer(oBuf, CL_CYAN_COLOR);
+            appendToBuffer(oBuf, CL_YELLOW_COLOR);
             appendToBuffer(oBuf, str, len);
             break;
         case highlight_num:
-            appendToBuffer(oBuf, CL_RED_COLOR);
+            appendToBuffer(oBuf, CL_CYAN_COLOR);
+            appendToBuffer(oBuf, str, len);
+            break;
+        case highlight_keyword_strong:
+            appendToBuffer(oBuf, CL_BLUE_COLOR);
+            appendToBuffer(oBuf, str, len);
+            break;
+        case highlight_keyword_regular:
+            appendToBuffer(oBuf, CL_MAGENTA_COLOR);
             appendToBuffer(oBuf, str, len);
             break;
         case highlight_string:
-            appendToBuffer(oBuf, CL_MAGENTA_COLOR);
+            appendToBuffer(oBuf, CL_RED_COLOR);
             appendToBuffer(oBuf, str, len);
             break;
         case normal:
@@ -747,6 +769,7 @@ void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src){
     updateStatus(dest);
 }
 
+#define isWhiteSpace(c) ( isspace(c) || c == '\0' || strchr(",.()+-/*=~%<>[];", c) != NULL)
 void updateStatus(struct outputBuffer* line){
     line->state = realloc(line->state, line->size);
     memset(line->state,  normal, line->size);
@@ -756,16 +779,21 @@ void updateStatus(struct outputBuffer* line){
     
     int i = 0;
     static int isQuote = 0;
+    int prev_whiteSp = 1;
+    
     if (&toRenderToScreen[0] == line)
-        isQuote = 0;
+        isQuote = 0; // Rendering from the first line so reset isQuote
     while ( i < line->size){
         
+        // Check for comments and shade comments appropriately
         if (openedFileFlags->flags & highlight_comment){
             if (!isQuote && !strncmp (&line->buf[i], "//", 2)){
-                memset(&line->state[i], highlight_comment, line->size - 1);
+                memset(&line->state[i], highlight_comment, line->size);
+                i = line->size -1;
                 break;
             }
         }
+        // Check for string literals and shade them appropriately
         if (openedFileFlags->flags & highlight_string){
             char c = line->buf[i];
             if (isQuote){
@@ -788,11 +816,35 @@ void updateStatus(struct outputBuffer* line){
             }
             
         }
-        
+        // Check for numerical literals and shade them appropriately
         if (openedFileFlags->flags & highlight_num)
             if (isdigit(line->buf[i]))
                 line->state[i] = highlight_num;
         
+        // Check for keywords and shade them appropriately
+        if (prev_whiteSp){
+            int idx;
+            for (idx = 0; openedFileFlags->recognisedKeywords[idx]; idx++) {
+                const char* key = openedFileFlags->recognisedKeywords[idx];
+                int length = strlen(key);
+                // is this a regular keyword
+                int key_regular = (key[length - 1] == '|');
+                if (key_regular)
+                    length--;
+                char c = line->buf[i + length];
+                if ( !strncmp(&line->buf[i], key, length)
+                     &&  isWhiteSpace(c) )  {
+                    memset(&line->state[i], key_regular ? highlight_keyword_regular : highlight_keyword_strong, length);
+                    i += length;
+                    break;
+                }
+            }
+            if (openedFileFlags->recognisedKeywords[idx] != NULL) {
+                    prev_whiteSp = 0;
+                    continue;
+            }
+        }
+        prev_whiteSp = isWhiteSpace(line->buf[i]);
         i++;
     }
 }

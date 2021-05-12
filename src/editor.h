@@ -35,7 +35,7 @@
 #define CL_BLACK_COLOR "\x1b[30m", 5
 #define CL_RED_COLOR "\x1b[31m", 5
 #define CL_GREEN_COLOR "\x1b[32m", 5
-#define CL_YELLO_COLOR "\x1b[33m", 5
+#define CL_YELLOW_COLOR "\x1b[33m", 5
 #define CL_BLUE_COLOR "\x1b[34m", 5
 #define CL_MAGENTA_COLOR "\x1b[35m", 5
 #define CL_CYAN_COLOR "\x1b[36m", 5
@@ -72,13 +72,16 @@ enum text_state {
     highlight_num = 1,
     highlight_string = (1 << 1),
     highlight_comment = (1 << 2),
-    highlight_match = (1 << 3)
+    highlight_keyword_strong = (1 << 3),
+    highlight_keyword_regular = (1 << 4),
+    highlight_match = (1 << 5)
 };
 
 
 struct editorFlags {
     char* filetype;
     char** recognisedFileList;
+    char** recognisedKeywords;
     int flags;
 };
 

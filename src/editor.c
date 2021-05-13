@@ -2,8 +2,8 @@
 
 // internal types to recognize
 char * c_fam[] = {".c", ".h", ".cpp", NULL};
-char * c_keyw[] = {"switch", "if", "while", "do", "for", "break", "continue", "return", "else", "enum", "struct", "union", "typedef", "static", "class", "case", "int|", "long|", "double|", "float|", "char|", "unsigned|", "signed|",
-    "void|", NULL};
+char * c_keyw[] = {"switch", "if", "while", "do", "for", "break", "continue", "return", "else", "enum", "struct", "union", "typedef", "register", "extern" ,"static", "class", "case", "volatile", "default",  "goto", "const|", "int|", "long|", "double|", "float|", "char|", "unsigned|", "signed|",
+    "void|", "auto|" NULL};
 
 char * text[] = {".txt", ".inf", NULL};
 struct editorFlags database[] = {

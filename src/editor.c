@@ -3,7 +3,7 @@
 // internal types to recognize
 char * c_fam[] = {".c", ".h", ".cpp", NULL};
 char * c_keyw[] = {"switch", "if", "while", "do", "for", "break", "continue", "return", "else", "enum", "struct", "union", "typedef", "register", "extern" ,"static", "class", "case", "volatile", "default",  "goto", "const|", "int|", "long|", "double|", "float|", "char|", "unsigned|", "signed|",
-    "void|", "auto|" NULL};
+    "void|", "auto|", NULL};
 
 char * text[] = {".txt", ".inf", NULL};
 struct editorFlags database[] = {
@@ -658,6 +658,7 @@ void scroll() {
     // Consider tabs
     struct outputBuffer* line = &fromOpenedFile[cursorPos.y + rowOffset - 1];
     cursorPos.x = addTabs(line, cursorPos.x);
+    
     repositionCursor();
 }
 
@@ -682,10 +683,14 @@ int zeroTabs(struct outputBuffer* line, int* xPos){
 }
 
 int addTabs(struct outputBuffer* line, int xPos){
+    if (openedFileLines == 0)
+        return xPos;
     int index = zeroTabs(line, &xPos);
     return index;
 }
 int subtractTabs(struct outputBuffer* line, int xPos){
+    if (openedFileLines == 0)
+        return xPos;
     zeroTabs(line, &xPos);
     return xPos;
 }
@@ -779,18 +784,41 @@ void updateStatus(struct outputBuffer* line){
     
     int i = 0;
     static int isQuote = 0;
+    static int isComment = 0;
     int prev_whiteSp = 1;
     
-    if (&toRenderToScreen[0] == line)
+    if (&toRenderToScreen[0] == line){
         isQuote = 0; // Rendering from the first line so reset isQuote
+        isComment = 0; // and isComment
+    }
     while ( i < line->size){
         
         // Check for comments and shade comments appropriately
         if (openedFileFlags->flags & highlight_comment){
-            if (!isQuote && !strncmp (&line->buf[i], "//", 2)){
+            if (!isQuote && !strncmp( &line->buf[i], "//", 2 )){
                 memset(&line->state[i], highlight_comment, line->size);
                 i = line->size -1;
                 break;
+            }
+            if (isComment && !isQuote){
+                if (!strncmp( &line->buf[i], "*/", 2 )){
+                    memset(&line->state[i], highlight_comment, 2);
+                    i += 2;
+                    isComment = 0;
+                    prev_whiteSp = 1;
+                    continue;
+                }
+                else {
+                    line->state[i] = highlight_comment;
+                    i++;
+                    continue;
+                }
+            }
+            if (!isComment && !isQuote && !strncmp( &line->buf[i], "/*", 2)){
+                memset(&line->state[i], highlight_comment, 2);
+                i += 2;
+                isComment = 1;
+                continue;
             }
         }
         // Check for string literals and shade them appropriately
@@ -1043,6 +1071,8 @@ void saveFile(){
                 free(string);
                 fileModified = 0;
                 loadStatusMessage("Saved! %d bytes written to disk", len);
+                for(int i = 0; i < openedFileLines; i++)
+                    updateStatus(&toRenderToScreen[i]);
                 return;
             }
         }

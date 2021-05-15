@@ -78,6 +78,7 @@ void reset(){
         failExit("Could not reset flags");
 }
 
+// updates the screen. Rewrites the output from the output buffer
 void refresh(){
     struct outputBuffer oBuf = {NULL, 0, NULL};
     appendToBuffer(&oBuf, HIDE_CURSOR);
@@ -98,6 +99,7 @@ void refresh(){
     free(oBuf.buf);
 }
 
+// Initializes the editor with default values
 void editorInit() {
     int res = getWindowSize(&screenrows, &screencols);
     if (res == -1)
@@ -170,7 +172,7 @@ int getWindowSize(int *rows, int *cols) {
 
 
 /* appendToBuffer
- * Dynamically reallocates memory for outputting a string
+ * Dynamically reallocates memory for outputting a string to the screen
  */
 void appendToBuffer(struct outputBuffer* out, const char* str, int len) {
     if (len == 0)
@@ -188,6 +190,7 @@ void appendToBuffer(struct outputBuffer* out, const char* str, int len) {
     
 }
 
+// Outputs a string the screen using a different color
 void appendWithColor(struct outputBuffer* oBuf, const char* str, int len, int value){
     switch (value){
         case highlight_match:
@@ -222,7 +225,7 @@ void appendWithColor(struct outputBuffer* oBuf, const char* str, int len, int va
     }
 }
 
-// Helper function to conver cursor positions to terminal sequence string
+// Helper function to convert cursor positions to terminal sequence string
 void appendreposCursorSequence(struct outputBuffer* out, int x, int y) {
     char temp[32];
     snprintf(temp, sizeof(temp), "\x1b[%d;%dH", y, x);
@@ -238,13 +241,13 @@ void appendreposCursorSequence(struct outputBuffer* out, int x, int y) {
 }
 
 
-
+// A function to read a single character from the user and process it
 char readCharacter(){
     // read character
     char c = '\0';
     int res;
-    while ((res = read( STDIN_FILENO, &c, 1)) != 1) {
-        if (res == -1 && errno != EAGAIN)
+    while ((res = read( STDIN_FILENO, &c, 1)) != 1) { // read one byte at a time
+        if (res == -1 && errno != EAGAIN) // EAGAIN : no data available now, try again
             failExit("Unable to read input");
     }
 
@@ -286,7 +289,6 @@ char readCharacter(){
                         case '4': case '8': // End key
                             if (cursorPos.y + rowOffset < openedFileLines && fromOpenedFile)
                                 cursorPos.x = toRenderToScreen[cursorPos.y + rowOffset -1].size;
-                                
                             break;
                             
                         case '3': // Delete
@@ -362,7 +364,6 @@ char readCharacter(){
                         cursorPos.x = 1;
                         colOffset = 0;
                     }
-                    
                 }
                 break;
               case 'D': // Arrow left
@@ -422,6 +423,7 @@ char readCharacter(){
     return c;
 }
 
+// Updates the location of the blinking cursor
 void repositionCursor(){
     struct outputBuffer oBuf = {NULL, 0, NULL};
     appendToBuffer(&oBuf, HIDE_CURSOR);
@@ -431,20 +433,20 @@ void repositionCursor(){
     free(oBuf.buf);
 }
 
-// Key press event handler
+// Processes the input keys (key press event handler)
 void processKey(){
     static int quit_conf = 1;
-    char c = readCharacter();
-    // process character
+    char c = readCharacter(); // input character
     switch (c) {
-        case controlKey('q'):
+        case controlKey('q'): // quit
             if (fileModified && quit_conf > 0){
                 loadStatusMessage("Alert!!! There are unsaved changes. "
                                   "Save using ctrl+s "
                                   "or quit with ctrl+q again");
                 quit_conf--;
-                return; // so the count doesn't reset yet at the end of this function
+                return; // allow for a confirmation message. Repeat the action again to quit
             }
+            // Begin clean up
             terminalOut(CL_SCREEN_ALL);
             terminalOut(REPOS_CURSOR_TOP_LEFT);
             for (int i = 0; i < openedFileLines; i++ ){
@@ -456,18 +458,18 @@ void processKey(){
             free(toRenderToScreen);
             
             free(filename);
-            exit(0);
+            exit(0); // return will not exit the application
             break;
         
-        case controlKey('s'):
+        case controlKey('s'): // save
             saveFile();
             break;
             
-        case controlKey('f'):
+        case controlKey('f'): // find
             search();
             break;
             
-        case '\r':            // Enter
+        case '\r': // Enter key
             if (awaitingArrow == 0)
                 insertLine();
             break;
@@ -483,16 +485,17 @@ void processKey(){
             // Do nothing
             break;
         case 0: // Arrow Keys
-            lastArrow = 0;
+            lastArrow = 0; // reset arrows to 0
             // Do nothing
             break;
-        default:
+        default: // add typed character to output buffer
             insertChar(c);
             break;
     };
     quit_conf = 1;
 }
 
+// Creates a welcome title to display when there is no file loaded
 void loadTitle(struct outputBuffer* oBuf){
     const char* title = "Welcome. feel free to type."
                   " Press \"ctr+q\" to quit\r\n";
@@ -504,50 +507,53 @@ void loadTitle(struct outputBuffer* oBuf){
     appendToBuffer(oBuf, padding, paddingLen);
     appendToBuffer(oBuf, title, len);
 }
+
+// appends the contents of a file or the lack of file to the output buffer
+// This is required every time we refresh the screen
 void loadRows(struct outputBuffer* oBuf, int delta){
-    
-    scroll(); // scroll updates rowOffset to position
-    for (int y = 0; y <= screenrows + delta - 1; y++)
-        if (y + rowOffset < openedFileLines) { // display file contents
+    scroll(); // updates the cursor position to where it needs to be
+    for (int y = 0; y <= screenrows + delta - 1; y++) // load only the size of the screen and ...
+        if (y + rowOffset < openedFileLines) { // display file contents within the available space
             int pos = y + rowOffset;
             int len = (fromOpenedFile[pos].size  - colOffset > screencols)
                         ? (screencols)  :  (fromOpenedFile[pos].size - colOffset);
             
             if (len > 0){
-                //appendToBuffer(oBuf, fromOpenedFile[pos].buf + colOffset, len);
-                
-                // Highlight Text
-                char *c = fromOpenedFile[pos].buf + colOffset;
-                unsigned char* status = &toRenderToScreen[pos].state[colOffset];
+                char *line = fromOpenedFile[pos].buf + colOffset;
+                unsigned char* lineStatus = &toRenderToScreen[pos].state[colOffset];
                 for (int i = 0; i < len; i++)
-                    appendWithColor(oBuf, &c[i], 1, status[i]);
-                // Reset colors to default at the end of printing the line (row) in the buffer
-                appendToBuffer(oBuf, CL_DEFAULT_COLOR);
+                    appendWithColor(oBuf, &line[i], 1, lineStatus[i]);
+                // after printing the line to the buffer
+                appendToBuffer(oBuf, CL_DEFAULT_COLOR); // Reset to the default colors
             }
 
             appendToBuffer(oBuf, "\r\n", 2);
              
         }
-        else {
+        else { //  no file (left) to load
             if (y < screenrows + delta){
                 appendToBuffer(oBuf, "~", 1);
                 appendToBuffer(oBuf, "\r\n", 2);
             }
         }
-            
 }
 
+// Prepares to render a stutus bar which is appended to the end of the output buffer
+// this will be at the bottom two lines of the screen
 void loadStatusBar(struct outputBuffer* oBuf){
     appendToBuffer(oBuf, CL_INVERT_COLOR);
     char status[80], rstatus[80];
-    const char* modifiedStatus = fileModified ? "*modified": "";
+    const char* modifiedStatus = fileModified ? "*modified" : "";
     int width = snprintf(status, sizeof(status),
                          "%.20s - %d lines %s",
-                         filename
-                         ? filename : "[Unsaved File]", openedFileLines, modifiedStatus );
+                         filename ? filename : "[Unsaved File]",
+                         openedFileLines,
+                         modifiedStatus );
     int rwidth = snprintf(rstatus, sizeof(rstatus),
-                          "%s | %d/%d", (openedFileFlags) ? openedFileFlags->filetype : "(unknown filetype)",
-                          cursorPos.y + rowOffset, openedFileLines);
+                          "%s | %d/%d",
+                          (openedFileFlags) ? openedFileFlags->filetype : "(unknown filetype)",
+                          cursorPos.y + rowOffset,
+                          openedFileLines);
     if (width > screencols)
         width = screencols;
     appendToBuffer(oBuf, status, width);
@@ -556,22 +562,23 @@ void loadStatusBar(struct outputBuffer* oBuf){
             appendToBuffer(oBuf, rstatus, rwidth);
             break;
         }
-        else
+        else // add space so as to align rstatus to the right
             appendToBuffer(oBuf, " ", 1);
     }
     appendToBuffer(oBuf, CL_FMT_CLEAR);
     appendToBuffer(oBuf, "\r\n", 2);
     
-    // Next Line: status message
-    appendToBuffer(oBuf, CL_LINE_RIGHT_OF_CURSOR); // clear the status message
+    // Next Line
+    // status message
+    appendToBuffer(oBuf, CL_LINE_RIGHT_OF_CURSOR); // clear previous status message
     int msgSize = strlen(statusmsg);
     if (msgSize > screencols)
         msgSize = screencols;
-    if (msgSize
-        && time(NULL) - statusmsg_time < 7)// display message (for 7 seconds)
+    if (msgSize && time(NULL) - statusmsg_time < 7)// display message (for 7 seconds)
         appendToBuffer(oBuf, statusmsg, msgSize);
 }
 
+// process a status message and prepares it for output
 void loadStatusMessage(const char *fmt, ...){
     va_list additionalArgs;
     va_start(additionalArgs, fmt);
@@ -580,18 +587,22 @@ void loadStatusMessage(const char *fmt, ...){
     statusmsg_time = time(NULL);
 }
 
+// prompts the user for input
+// during this process, this will run a function that has been passed as a parameter
 char* userPrompt(char* message, void (*func)(char* str, int key)){
     size_t inputSize = 128;
     char* input = malloc(inputSize);
     input[0] = '\0';
-    
     size_t len = 0;
     
     while (1){
         loadStatusMessage(message, input);
-        refresh(); // allows to see input on screen
+        refresh(); // allows the prompt message and the user input to be seen on the screen
+                   // through a status message
         
         int charIn = readCharacter();
+        // test the user input
+        //
         if (charIn == '\x1b'){  // Escape key
             loadStatusMessage("");
             if (func)

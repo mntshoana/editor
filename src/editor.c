@@ -639,6 +639,7 @@ char* userPrompt(char* message, void (*func)(char* str, int key)){
     }
 }
 
+// before refreshing the screen, this function will update the cursopr position and the screen position to the correct position
 void scroll() {
     // VERTICAL SCROLLING
     // cursorPos.x and y are 1 based
@@ -673,6 +674,9 @@ void scroll() {
     repositionCursor();
 }
 
+// the output buffer and the render to screen buffer are not equal
+// tab keys are converted to spaces in the screen buffer
+// this function interprets an index without any conversions from the original output buffer
 int zeroTabs(struct outputBuffer* line, int* xPos){
     int i = 0;
     
@@ -693,12 +697,17 @@ int zeroTabs(struct outputBuffer* line, int* xPos){
     return idx + 1;;
 }
 
+// Retreves the current index ( x-position ) in the given output line of the output buffer
+// the index takes accoount of the converted tabs into spaces
 int addTabs(struct outputBuffer* line, int xPos){
     if (openedFileLines == 0)
         return xPos;
     int index = zeroTabs(line, &xPos);
     return index;
 }
+
+// Retreves the current index ( x-position ) in the given output line of the output buffer
+// the index ignores any conversion of tabs into spaces
 int subtractTabs(struct outputBuffer* line, int xPos){
     if (openedFileLines == 0)
         return xPos;
@@ -706,6 +715,7 @@ int subtractTabs(struct outputBuffer* line, int xPos){
     return xPos;
 }
 
+// opens a file
 void openFile(char* file) {
     free(filename);
     filename = strdup(file);
@@ -731,6 +741,7 @@ void openFile(char* file) {
     awaitingArrow = 0;
 }
 
+// Detects the file type of the file which has been openeed
 void detectFileType(){
     openedFileFlags = NULL;
     if (filename == NULL)
@@ -751,6 +762,7 @@ void detectFileType(){
     }
 }
 
+// Adds any live changes by the user to the output buffer
 void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src){
     // Searching for tabs
     int tabs = 0;
@@ -786,6 +798,8 @@ void updateBuffer(struct outputBuffer* dest, struct outputBuffer* src){
 }
 
 #define isWhiteSpace(c) ( isspace(c) || c == '\0' || strchr(",.()+-/*=~%<>[];", c) != NULL)
+// Updates the state of the editor flags for each and every character of the current line passed as a parameter - this adjust the flags to the appropriate mode of output
+// Purpose is to allow the outputed text or the backgound to be changed to a custom color
 void updateStatus(struct outputBuffer* line){
     line->state = realloc(line->state, line->size);
     memset(line->state,  normal, line->size);
@@ -794,12 +808,12 @@ void updateStatus(struct outputBuffer* line){
         return;
     
     int i = 0;
-    static int isQuote = 0;
-    static int isComment = 0;
-    int prev_whiteSp = 1;
+    static int isQuote = 0; // boolean, flags a change the color of quoted text
+    static int isComment = 0; // 33for changing the color of comments
+    int prev_whiteSp = 1; // for recognizing the beginning and end of a non white space char
     
-    if (&toRenderToScreen[0] == line){
-        isQuote = 0; // Rendering from the first line so reset isQuote
+    if (&toRenderToScreen[0] == line){ // Each render of the first line requires that we
+        isQuote = 0; // Requires a reset of the
         isComment = 0; // and isComment
     }
     while ( i < line->size){
@@ -888,8 +902,8 @@ void updateStatus(struct outputBuffer* line){
     }
 }
 
-// Adds a string to the end of the output buffer and the render buffer
-//  when opening a file or typing into the editor
+// Appends a string to the end of the output buffer on a new line
+// Especially used when opening a file or typing into the editor
 void insertNewLine(int at, char* stringLine, int readCount){
     if (at < 0 || at > openedFileLines)
         return;
@@ -919,6 +933,7 @@ void insertNewLine(int at, char* stringLine, int readCount){
     fileModified += 1;
 }
 
+// Appends a string to the output buffer on a new line
 void appendString(struct outputBuffer* source, int line, char* string, size_t len){
     source[line].buf = realloc(source[line].buf, source[line].size + len +1);
     memcpy(&source[line].buf[source[line].size], string, len);
@@ -929,7 +944,7 @@ void appendString(struct outputBuffer* source, int line, char* string, size_t le
 }
 
 
-
+// Inserts a string to the the output buffer
 void insertIntoBuffer(struct outputBuffer* dest, int pos, int c){
     if (pos < 0 || pos > dest->size)
         pos = dest->size; // if not within the bounds of the existing line
@@ -946,6 +961,7 @@ void insertIntoBuffer(struct outputBuffer* dest, int pos, int c){
     fileModified += 1;
 }
 
+// Inserts a character into the output buffer
 void insertChar(int character) {
     int yPos = cursorPos.y + rowOffset - 1;
     int xPos = subtractTabs(&fromOpenedFile[yPos],cursorPos.x + colOffset) -1 ;
@@ -969,6 +985,7 @@ void insertChar(int character) {
         updateStatus(&toRenderToScreen[i]);
 }
 
+// Inserts a new line into the output buffer
 void insertLine(){
     // when pressing enter
     int yPos = cursorPos.y + rowOffset - 1;
@@ -989,8 +1006,9 @@ void insertLine(){
     }
     cursorPos.y++;
     cursorPos.x = 1;
-    
 }
+
+// Deletes from the output buffer
 void deleteFromBuffer(struct outputBuffer* dest, int at){
     if (at < 0 || at > dest->size)
         return; // if not within the bounds of the existing line
@@ -1000,6 +1018,7 @@ void deleteFromBuffer(struct outputBuffer* dest, int at){
     fileModified += 1;
 }
 
+// Deletes a character from the output buffer
 void deleteChar(){
     if (!fromOpenedFile){
         return;
@@ -1027,6 +1046,7 @@ void deleteChar(){
         updateStatus(&toRenderToScreen[i]);
 }
 
+// Deletes a line from the output buffer
 void deleteRow(int at){
     if (at < 0 || at >= openedFileLines)
         return;
@@ -1042,6 +1062,7 @@ void deleteRow(int at){
     fileModified++;
 }
 
+// Prepares the whole document into a single string in order to save the file onto the disk
 char* prepareToString(int *bufferLength){
     int stringLength = 0;
     for (int i = 0; i < openedFileLines; i++ )
@@ -1059,6 +1080,7 @@ char* prepareToString(int *bufferLength){
     return preparedString; // note, caller should free this
 }
 
+// Saves the current document onto the disk
 void saveFile(){
     if (filename == NULL){
         filename = userPrompt("Save as : %s", NULL);
@@ -1093,6 +1115,7 @@ void saveFile(){
     loadStatusMessage("Error! Cannot save - I/O error details: %s", strerror(errno));
 }
 
+// Searches the document for any occurence of the queried string inputed by the user
 void search(){
     awaitingArrow = 1;
     char* query = userPrompt("Search: %s (ESC to cancel | Arrows or Enter to search)", onSearch);
@@ -1101,6 +1124,9 @@ void search(){
         return;
     free(query);
 }
+
+// Callback function that is to be called to search the document
+// This function also handles inputs from the user for more customized control
 void onSearch (char *string, int key){
     static int last = -1;
     static int next = 0;
@@ -1116,22 +1142,22 @@ void onSearch (char *string, int key){
         saved_line = NULL;
     }
     
-    if ( key == '\x1b') {// Enter and Esc
+    if ( key == '\x1b') {// Entered key == Esc
         last = -1; // reset
         next = 0;
         direction =1;
-        return;
+        return; // and exit search
     }
-    else if ( lastArrow==2 || lastArrow ==4 || key == '\r'){
+    else if ( lastArrow==2 || lastArrow ==4 || key == '\r'){ // down, right and enter
         direction = 1;
         lastArrow = 0;
     }
-    else if ( lastArrow == 1 || lastArrow == 3 ){
+    else if ( lastArrow == 1 || lastArrow == 3 ){ //up and left
         direction = -1;
         lastArrow = 0;
         next = 0;
     }
-    else {
+    else { // query string is changed, therefor, the search is to be started again
         last = -1;
         next = 0;
         direction = 1;

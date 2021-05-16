@@ -65,6 +65,8 @@
 #define SHOW_CURSOR "\x1b[?25h", 6
 // end of V100 escape sequences
 
+
+// Editor settings/////////
 #define TAB_SPACES 8
 
 enum text_state {
@@ -113,7 +115,7 @@ int lastArrow;
 char statusmsg[80];
 time_t statusmsg_time;
 
-
+//// Functions
 
 void failExit(const char *s);
 void turnOfFlags();
